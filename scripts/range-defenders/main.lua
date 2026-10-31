@@ -1,4 +1,4 @@
--- Solana Invaders by Range
+-- Solana Defenders by Range: screen out Solana threats.
 -- Protect Solana from malicious actors.
 --
 -- Controls:  LEFT / RIGHT  move
@@ -10,19 +10,69 @@ local input = badge.input
 local led   = badge.led
 local kv    = badge.storage.kv
 
+-- BEGIN GENERATED QR
+local QR = { url = "https://www.range.org/product/transaction-screening?utm_source=event-breakpoint&utm_medium=qr&utm_campaign=always-on&utm_content=badge-invaders", size = 45, rows = {
+  "111111100101001111001001001001111100101111111",
+  "100000100100111101010011101110010001001000001",
+  "101110100000110101011001110011011101001011101",
+  "101110101111011001100100011111101101101011101",
+  "101110101110001101011111110111101011101011101",
+  "100000100100011000001000111100011000001000001",
+  "111111101010101010101010101010101010101111111",
+  "000000000001001101111000111011011111100000000",
+  "110001110111111101111111101001010010000011000",
+  "010111010001001100001100001111110111101101110",
+  "111000111101100111101111101111000010001001110",
+  "100101000011001111100101110010101111010111100",
+  "111101100010001000101100111110101010001010001",
+  "011001011011111101010100010011111101110100111",
+  "011101100100000111011101101010010001101110110",
+  "110010010001111100011010010001100011110101100",
+  "101111110010100101111011010000110110001001010",
+  "111010011111110001011100010001110100110111111",
+  "001011101001011111110000100010001100100011101",
+  "110110010100001000010000111011001111111011100",
+  "111011111101110111111111110000110011111110010",
+  "011110001110000110011000111101111111100010100",
+  "010110101100011001111010110011001111101011000",
+  "000010001001101100001000100110111100100010100",
+  "000111111010100110101111100011001001111110001",
+  "011101011110100000001111110111100001010101011",
+  "011110111111110010101010001100010110100101110",
+  "011010000100111011000111110001100011010111101",
+  "010101110000010111110001111001010010000011101",
+  "110110011001101100011011110101110101001100011",
+  "001001110010011101111000010001011101101001001",
+  "000101010001010101101111100010101111101100101",
+  "011100111100100011100000011001110010111110011",
+  "101011000011011110010101011111110111111111000",
+  "000010110010000111100100011100011010110001010",
+  "011110001011010001101011100010101001011101111",
+  "100110111101001001111111100110101011111111000",
+  "000000001101101101001000110111100100100011001",
+  "111111101010111001111010101101000111101011010",
+  "100000101100100110111000101001000011100010111",
+  "101110100011111011101111101000010101111110001",
+  "101110100000100100010101110111101101000111000",
+  "101110100100110010011100110110011000101010110",
+  "100000101000111101111100011110011111110111100",
+  "111111101101010111110001111001110000101010010"
+} }
+-- END GENERATED QR
+
 ---------------------------------------------------------------
--- EDIT ME: branding and contacts (About + alert screens)
+-- Branding and contacts (About + alert screens)
 ---------------------------------------------------------------
 local WEBSITE = "range.org"
-local CONTACT = "range.org/get-in-touch"
 local ABOUT_LINES = {
-  "Range: security & risk intelligence",
-  "for Solana. Real-time alerts,",
-  "address screening, tx simulation.",
+  "Range screens Solana wallets, tokens and",
+  "transactions for risk and compliance.",
   "",
-  "Web:      " .. WEBSITE,
-  "Contact:  " .. CONTACT,
-  "Built by: @your_handle",            -- EDIT ME
+  "Every transaction screened before the",
+  "money moves. $35B+ on Solana protected.",
+  "",
+  "Web:  " .. WEBSITE,
+  "Code: github.com/Jars1987/RangeDefenders",
 }
 
 ---------------------------------------------------------------
@@ -45,12 +95,22 @@ local LB = input.label("b")      -- "CANCEL"
 
 -- The malicious actors. Row 1 is the top row.
 local KINDS = {
-  { name = "DPRK",    pts = 40, color = g.RED,            alert = "DPRK-linked wallet" },
-  { name = "BYBIT",   pts = 30, color = g.ORANGE,         alert = "Bybit exploiter cluster" },
-  { name = "OFAC",    pts = 20, color = g.YELLOW,         alert = "OFAC-sanctioned address" },
-  { name = "DRAINER", pts = 10, color = g.SOLANA_MAGENTA, alert = "Wallet drainer" },
+  { name = "EXPLOIT", pts = 40, color = g.RED, names = {
+    "WORMHOLE HACKER", "BYBIT HACKER", "BRIDGE HACKER", "RAYDIUM HACKER",
+    "SOLEND HACKER", "CREMA HACKER", "NIRVANA HACKER", "CYPHER HACKER",
+    "LOOPSCALE HACKER", "DEXX HACKER", "DEFITUNA HACKER",
+  } },
+  { name = "SCAM", pts = 30, color = g.ORANGE, names = {
+    "PUMP AND DUMP", "SCAM COIN", "RUG PULL DEV", "PRESALE SCAMMER", "FAKE AIRDROP",
+  } },
+  { name = "MIXER", pts = 20, color = g.YELLOW, names = {
+    "DPRK WALLET 1", "DPRK WALLET 2", "LAUNDERING HOP",
+  } },
+  { name = "DRAINER", pts = 10, color = g.SOLANA_MAGENTA, names = {
+    "RAINBOW DRAINER", "WALLET DRAINER", "FAKE MINT SITE",
+  } },
 }
-local UFO_ALERT = "Protocol exploiter"
+local BOSS_NAME = "LAZARUS"
 
 ---------------------------------------------------------------
 -- Helpers
@@ -64,12 +124,16 @@ end
 local function overlap(ax, ay, aw, ah, bx, by, bw, bh)
   return ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah
 end
+local function threat(kind, name)
+  return { type = KINDS[kind].name, name = name }
+end
 
 ---------------------------------------------------------------
 -- State
 ---------------------------------------------------------------
 local state, state_t = "title", 0
 local t = 0
+local state_since, qr_return = 0, "title"
 local score, best, lives, wave = 0, 0, 3, 1
 local new_best = false
 local px, fire_cd = 0, 0
@@ -83,14 +147,12 @@ local bunkers = {}
 local particles, popups = {}, {}
 local flash, led_cd = 0, 0
 local killer = nil
+local breached = 0
 
 local stars = {}
-for i = 1, 40 do
-  stars[i] = { x = math.random(0, W - 1), y = math.random(0, H - 1), s = math.random(8, 30) }
-end
 
 local function set_state(s)
-  state, state_t = s, 0
+  state, state_t, state_since = s, 0, t
   if s == "play" or s == "wave" then led.off() end
 end
 
@@ -115,9 +177,19 @@ end
 
 local function build_wave()
   aliens = {}
+  local tough, max_tough = 0, (COLS * ROWS) // 3
   for r = 0, ROWS - 1 do
+    local names = KINDS[r + 1].names
     for c = 0, COLS - 1 do
-      aliens[#aliens + 1] = { col = c, row = r, kind = r + 1, alive = true }
+      local name = names[(c + wave - 1) % #names + 1]
+      local hits = 1
+      if tough < max_tough then
+        hits, tough = 2, tough + 1
+      end
+      aliens[#aliens + 1] = {
+        col = c, row = r, kind = r + 1, alive = true,
+        name = name, hits_left = hits, damaged = false, white_until = 0,
+      }
     end
   end
   alive = #aliens
@@ -126,14 +198,15 @@ local function build_wave()
   fy = 34 + math.min((wave - 1) * 6, 36)
   fdir = 1
   pbullets, ebullets = {}, {}
-  enemy_cd = 1.5
-  ufo, ufo_cd = nil, math.random(12, 20)
+  enemy_cd = t + 1.5
+  ufo, ufo_cd = nil, t + math.random(12, 20)
   build_bunkers()
 end
 
 local function new_game()
   score, lives, wave = 0, 3, 1
-  new_best, killer = false, nil
+  new_best, killer, breached = false, nil, 0
+  fire_cd, flash = t, 0
   px = (W - PW) // 2
   particles, popups = {}, {}
   build_wave()
@@ -150,20 +223,23 @@ local function burst(x, y, color, n)
     local s = 30 + math.random() * 80
     particles[#particles + 1] = {
       x = x, y = y, vx = math.cos(a) * s, vy = math.sin(a) * s,
-      life = 0.5, color = color,
+      until_t = t + 0.5, color = color,
     }
   end
 end
 
 local function popup(x, y, text, color)
-  popups[#popups + 1] = { x = x, y = y, text = text, color = color, life = 0.9 }
+  local half = g.text_width(text) / 2
+  popups[#popups + 1] = {
+    x = clamp(x, half, W - half), y = clamp(y, 17, H - 8),
+    text = text, color = color, until_t = t + 0.9,
+  }
 end
 
 local function update_effects(dt)
   for i = #particles, 1, -1 do
     local p = particles[i]
-    p.life = p.life - dt
-    if p.life <= 0 then
+    if t >= p.until_t then
       table.remove(particles, i)
     else
       p.x, p.y = p.x + p.vx * dt, p.y + p.vy * dt
@@ -171,8 +247,7 @@ local function update_effects(dt)
   end
   for i = #popups, 1, -1 do
     local p = popups[i]
-    p.life = p.life - dt
-    if p.life <= 0 then table.remove(popups, i) else p.y = p.y - 20 * dt end
+    if t >= p.until_t then table.remove(popups, i) else p.y = math.max(17, p.y - 20 * dt) end
   end
 end
 
@@ -208,14 +283,14 @@ local function game_over()
     best, new_best = score, true
     kv.set("best", tostring(best))
   end
-  led_cd = 0
+  led_cd = t
   set_state("over")
 end
 
-local function player_hit(text)
+local function player_hit(kind, name)
   lives = lives - 1
-  killer = text
-  flash = 0.4
+  killer = threat(kind, name)
+  flash = t + 0.4
   burst(px + PW / 2, PY + PH / 2, g.SOLANA_GREEN, 20)
   led.pulse(255, 0, 0, 600)
   ebullets = {}
@@ -233,10 +308,9 @@ local function update_play(dt)
   px = clamp(px, 2, W - PW - 2)
 
   -- firing
-  fire_cd = fire_cd - dt
-  if (input.down("a") or input.down("up")) and fire_cd <= 0 and #pbullets < 2 then
+  if (input.down("a") or input.down("up")) and t >= fire_cd and #pbullets < 2 then
     pbullets[#pbullets + 1] = { x = px + PW / 2 - 1, y = PY - 6 }
-    fire_cd = 0.28
+    fire_cd = t + 0.28
   end
 
   -- formation movement: speeds up as actors are removed
@@ -276,8 +350,14 @@ local function update_play(dt)
     end
   end
   if bottom >= PY then
-    killer = "Treasury breached"
-    flash = 0.4
+    for _, a in ipairs(aliens) do
+      if a.alive and a.row == maxr then
+        killer = threat(a.kind, a.name)
+        break
+      end
+    end
+    breached = alive
+    flash = t + 0.4
     led.pulse(255, 0, 0, 600)
     game_over()
     return
@@ -295,7 +375,7 @@ local function update_play(dt)
     elseif ufo and overlap(b.x, b.y, 2, 6, ufo.x, UFO_Y, 30, 12) then
       score = score + ufo.pts
       burst(ufo.x + 15, UFO_Y + 6, g.CYAN, 18)
-      popup(ufo.x + 15, UFO_Y, "EXPLOITER +" .. ufo.pts, g.CYAN)
+      popup(ufo.x + 15, UFO_Y, ufo.name .. " +" .. ufo.pts, g.CYAN)
       led.pulse(0, 255, 255, 300)
       ufo = nil
       hit = true
@@ -305,12 +385,17 @@ local function update_play(dt)
           local ax, ay = fx + a.col * COLSP, fy + a.row * ROWSP
           if overlap(b.x, b.y, 2, 6, ax, ay, AW, AH) then
             local k = KINDS[a.kind]
-            a.alive = false
-            alive = alive - 1
-            score = score + k.pts
-            burst(ax + AW / 2, ay + AH / 2, k.color, 10)
-            popup(ax + AW / 2, ay, k.name .. " +" .. k.pts, k.color)
-            led.pulse(20, 241, 149, 150)
+            a.hits_left = a.hits_left - 1
+            if a.hits_left > 0 then
+              a.damaged, a.white_until = true, t + 0.15
+            else
+              a.alive = false
+              alive = alive - 1
+              score = score + k.pts
+              burst(ax + AW / 2, ay + AH / 2, k.color, 10)
+              popup(ax + AW / 2, ay, a.name .. " +" .. k.pts, k.color)
+              led.pulse(20, 241, 149, 150)
+            end
             hit = true
             break
           end
@@ -321,8 +406,7 @@ local function update_play(dt)
   end
 
   -- enemy fire: a random actor at the bottom of its column shoots
-  enemy_cd = enemy_cd - dt
-  if enemy_cd <= 0 and alive > 0 then
+  if t >= enemy_cd and alive > 0 then
     local lowest = {}
     for _, a in ipairs(aliens) do
       if a.alive then
@@ -337,8 +421,9 @@ local function update_play(dt)
       x = fx + s.col * COLSP + AW / 2 - 1,
       y = fy + s.row * ROWSP + AH,
       kind = s.kind,
+      name = s.name,
     }
-    enemy_cd = math.max(0.3, 1.3 - wave * 0.1 - (1 - ratio) * 0.5) * (0.6 + math.random() * 0.8)
+    enemy_cd = t + math.max(0.3, 1.3 - wave * 0.1 - (1 - ratio) * 0.5) * (0.6 + math.random() * 0.8)
   end
 
   -- enemy bullets
@@ -351,22 +436,21 @@ local function update_play(dt)
     elseif bunker_hit(b.x, b.y, 3, 7) then
       table.remove(ebullets, i)
     elseif overlap(b.x, b.y, 3, 7, px + 3, PY + 2, PW - 6, PH - 2) then
-      player_hit(KINDS[b.kind].alert)
+      player_hit(b.kind, b.name)
       return
     end
   end
 
-  -- the exploiter mothership
+  -- the Lazarus boss mothership
   if ufo then
     ufo.x = ufo.x + ufo.dir * 70 * dt
     if ufo.x < -40 or ufo.x > W + 40 then ufo = nil end
   else
-    ufo_cd = ufo_cd - dt
-    if ufo_cd <= 0 then
+    if t >= ufo_cd then
       local dir = (math.random(2) == 1) and 1 or -1
       local pts = ({ 50, 100, 150, 300 })[math.random(4)]
-      ufo = { x = (dir == 1) and -30 or W, dir = dir, pts = pts }
-      ufo_cd = math.random(15, 25)
+      ufo = { x = (dir == 1) and -30 or W, dir = dir, pts = pts, name = BOSS_NAME }
+      ufo_cd = t + math.random(15, 25)
     end
   end
 
@@ -385,10 +469,10 @@ end
 ---------------------------------------------------------------
 local BLACK = g.BLACK
 
-local function draw_alien(kind, x, y, f)
-  local c = KINDS[kind].color
+local function draw_alien(kind, x, y, f, white)
+  local c = white and g.WHITE or KINDS[kind].color
   if kind == 1 then
-    -- DPRK: squid
+    -- EXPLOIT: squid
     g.fill_triangle(x + 10, y, x + 3, y + 8, x + 17, y + 8, c)
     g.fill_rect(x + 3, y + 6, 15, 4, c)
     g.fill_rect(x + 7, y + 5, 2, 2, BLACK)
@@ -403,7 +487,7 @@ local function draw_alien(kind, x, y, f)
       g.line(x + 15, y + 10, x + 13, y + 13, c)
     end
   elseif kind == 2 then
-    -- BYBIT hacker: crab with snapping claws
+    -- SCAM: crab with snapping claws
     g.fill_round_rect(x + 4, y + 3, 12, 8, 2, c)
     g.line(x + 7, y + 3, x + 5, y, c)
     g.line(x + 13, y + 3, x + 15, y, c)
@@ -420,15 +504,21 @@ local function draw_alien(kind, x, y, f)
       g.line(x + 14, y + 11, x + 12, y + 13, c)
     end
   elseif kind == 3 then
-    -- OFAC sanctioned: a walking "banned" sign
+    -- MIXER: a turning swirl inside a tumbler
     g.fill_circle(x + 10, y + 6, 6, c)
     g.fill_circle(x + 10, y + 6, 3, BLACK)
-    g.line(x + 7, y + 3, x + 13, y + 9, c)
-    g.line(x + 8, y + 3, x + 14, y + 9, c)
-    local o = (f == 0) and 0 or 2
-    g.line(x + 5 + o, y + 12, x + 5 + o, y + 13, c)
-    g.line(x + 9 + o, y + 12, x + 9 + o, y + 13, c)
-    g.line(x + 13 - o, y + 12, x + 13 - o, y + 13, c)
+    if f == 0 then
+      g.line(x + 10, y + 2, x + 14, y + 6, BLACK)
+      g.line(x + 14, y + 6, x + 10, y + 8, BLACK)
+      g.line(x + 10, y + 6, x + 10, y + 8, c)
+    else
+      g.line(x + 10, y + 10, x + 6, y + 6, BLACK)
+      g.line(x + 6, y + 6, x + 10, y + 4, BLACK)
+      g.line(x + 10, y + 4, x + 10, y + 6, c)
+    end
+    g.line(x + 3, y + 1, x + 4, y + 13, c)
+    g.line(x + 17, y + 1, x + 16, y + 13, c)
+    g.line(x + 4, y + 13, x + 16, y + 13, c)
   else
     -- DRAINER: a wallet with fangs
     g.fill_round_rect(x + 1, y + 1, 18, 10, 2, c)
@@ -495,7 +585,11 @@ local function draw_world()
 
   local ix, iy = I(fx), I(fy)
   for _, a in ipairs(aliens) do
-    if a.alive then draw_alien(a.kind, ix + a.col * COLSP, iy + a.row * ROWSP, anim_f) end
+    if a.alive then
+      local x, y = ix + a.col * COLSP, iy + a.row * ROWSP
+      draw_alien(a.kind, x, y, anim_f, t < a.white_until)
+      if a.damaged then g.rect(x - 1, y - 1, AW + 2, AH + 2, g.WHITE) end
+    end
   end
   if ufo then draw_ufo(I(ufo.x), UFO_Y) end
 
@@ -515,10 +609,10 @@ local function draw_world()
   for _, p in ipairs(popups) do g.text_center(p.text, I(p.x), I(p.y), p.color) end
 
   g.line(0, GROUND, W - 1, GROUND, g.SOLANA_GREEN)
-  g.text_center("protected by " .. WEBSITE, W // 2, GROUND + 3, g.MUTED)
+  g.text_center("screened by " .. WEBSITE, W // 2, GROUND + 3, g.MUTED)
   draw_hud()
 
-  if flash > 0 then
+  if t < flash then
     g.rect(0, 0, W, H, g.RED)
     g.rect(1, 1, W - 2, H - 2, g.RED)
   end
@@ -530,9 +624,9 @@ local function draw_title()
   draw_bar(0)
   local p = (math.sin(t * 2) + 1) / 2
   g.text_center("SOLANA", W // 2, 12, g.gradient(p), 3)
-  g.text_center("INVADERS", W // 2, 38, g.gradient(1 - p), 3)
+  g.text_center("DEFENDERS", W // 2, 38, g.gradient(1 - p), 3)
   g.text_center("by Range", W // 2, 66, g.SOLANA_TEAL)
-  g.text_center("Protect Solana from malicious actors", W // 2, 80, g.WHITE)
+  g.text_center("Protect Solana", W // 2, 80, g.WHITE)
 
   local lx = 85
   for i, k in ipairs(KINDS) do
@@ -543,14 +637,15 @@ local function draw_title()
   end
   local y = 96 + 4 * 19
   draw_ufo(lx - 5, y + 2)
-  g.text("EXPLOITER", lx + 30, y + 3, g.CYAN)
+  g.text("LAZARUS BOSS", lx + 30, y + 3, g.CYAN)
   g.text_right("??? pts", lx + 150, y + 3, g.MUTED)
 
+  g.text_center("Screen threats before funds move", W // 2, y + 19, g.MUTED)
   if I(t * 2) % 2 == 0 then
-    g.text_center(LA .. " start  RIGHT about  " .. LB .. " exit", W // 2, 198, g.WHITE)
+    g.text_center(LA .. " start  RIGHT about  " .. LB .. " exit", W // 2, y + 33, g.WHITE)
   end
-  g.text_center("BEST " .. best, W // 2, 213, g.SOLANA_GREEN)
-  g.text_center(WEBSITE, W // 2, 228, g.MUTED)
+  g.text_center("BEST " .. best, W // 2, y + 47, g.SOLANA_GREEN)
+  g.text_center(WEBSITE, W // 2, 232, g.MUTED)
 end
 
 local function draw_about()
@@ -558,12 +653,11 @@ local function draw_about()
   draw_stars()
   draw_bar(0)
   g.text_center("ABOUT", W // 2, 14, g.SOLANA_GREEN, 2)
-  g.text_center("SOLANA INVADERS by Range", W // 2, 38, g.WHITE)
+  g.text_center("SOLANA DEFENDERS by Range", W // 2, 38, g.WHITE)
   for i, line in ipairs(ABOUT_LINES) do
-    g.text(line, 20, 60 + (i - 1) * 14, g.WHITE)
+    g.text(line, 16, 60 + (i - 1) * 14, g.WHITE)
   end
-  g.text_center(WEBSITE, W // 2, 172, g.gradient((math.sin(t * 2) + 1) / 2), 2)
-  g.text_center(LB .. " back", W // 2, 222, g.MUTED)
+  g.text_center(LB .. " back  DOWN QR", W // 2, 222, g.MUTED)
 end
 
 -- Game over, styled as a Range monitoring alert
@@ -580,11 +674,14 @@ local function draw_over()
   g.text_center("CRITICAL", 256, 28, g.WHITE)
   g.line(22, 48, 298, 48, g.BORDER)
 
-  g.text("Anomalous movement of funds", 22, 58, g.ORANGE)
-  g.text("detected on Solana", 22, 70, g.ORANGE)
-  g.text("Flagged:  " .. (killer or "Unknown actor"), 22, 88, g.WHITE)
-  g.text("Rule:     Treasury outflow > limit", 22, 100, g.WHITE)
-  g.text("Status:   Defenses down", 22, 112, g.WHITE)
+  g.text("Funds moved to a flagged wallet", 22, 58, g.ORANGE)
+  local flagged = killer and killer.name or "WALLET DRAINER"
+  g.text("Flagged:  " .. flagged, 22, 88, g.WHITE)
+  if breached > 0 then
+    g.text(breached .. (breached == 1 and " threat got through" or " threats got through"), 22, 112, g.WHITE)
+  else
+    g.text("Status:   Defenses down", 22, 112, g.WHITE)
+  end
   g.line(22, 128, 298, 128, g.BORDER)
 
   g.text("SCORE", 22, 136, g.MUTED)
@@ -595,27 +692,50 @@ local function draw_over()
   g.text(tostring(wave), 238, 148, g.WHITE, 2)
   if new_best then g.text("NEW BEST!", 130, 166, g.SOLANA_GREEN) end
 
-  g.text_center("Get real-time onchain alerts:", W // 2, 178, g.MUTED)
-  g.text_center(WEBSITE, W // 2, 190, g.gradient((math.sin(t * 2) + 1) / 2), 2)
+  g.text_center("Every transaction screened before the money moves.", W // 2, 184, g.MUTED)
   if state_t > 0.8 then
-    g.text_center(LA .. " retry  RIGHT about  " .. LB .. " menu", W // 2, 214, g.WHITE)
+    g.text_center(LA .. " retry  DOWN QR  " .. LB .. " menu", W // 2, 214, g.WHITE)
   end
+end
+
+-- QR plus a four-module quiet zone, with one rectangle per dark run.
+local function draw_qr()
+  g.clear(g.WHITE)
+  local px = floor(math.min(W, H - 24) / (QR.size + 8))
+  local x = floor((W - px * (QR.size + 8)) / 2)
+  local y = floor((H - 24 - px * (QR.size + 8)) / 2)
+  for r, row in ipairs(QR.rows) do
+    local c = 1
+    while c <= QR.size do
+      if row:sub(c, c) == "1" then
+        local first = c
+        repeat c = c + 1 until c > QR.size or row:sub(c, c) ~= "1"
+        g.fill_rect(x + (first + 3) * px, y + (r + 3) * px, (c - first) * px, px, g.BLACK)
+      else
+        c = c + 1
+      end
+    end
+  end
+  g.text_center("Screen Solana addresses with Range", W // 2, H - 18, g.BLACK, 1)
 end
 
 ---------------------------------------------------------------
 -- Runtime callbacks
 ---------------------------------------------------------------
 function on_start()
+  math.randomseed(string.unpack("<i4", badge.system.random_bytes(4)))
+  for i = 1, 40 do
+    stars[i] = { x = math.random(0, W - 1), y = math.random(0, H - 1), s = math.random(8, 30) }
+  end
   led.take()
   best = tonumber(kv.get("best", "0")) or 0
-  badge.log("Solana Invaders by Range - best " .. best)
+  badge.log("Solana Defenders by Range - best " .. best)
 end
 
 function on_update(dt)
-  if dt > 0.05 then dt = 0.05 end
+  dt = clamp(dt, 0, 0.05)
   t = t + dt
-  state_t = state_t + dt
-  if flash > 0 then flash = flash - dt end
+  state_t = t - state_since
 
   for _, s in ipairs(stars) do
     s.y = s.y + s.s * dt
@@ -625,6 +745,12 @@ function on_update(dt)
   if state == "play" then
     update_play(dt)
   else
+    -- Combat clocks only run during play: pausing, dying or a wave banner
+    -- must not bank shots that all fire on the first play frame.
+    if state == "pause" or state == "dying" or state == "wave" then
+      fire_cd, enemy_cd = fire_cd + dt, enemy_cd + dt
+      if not ufo then ufo_cd = ufo_cd + dt end
+    end
     anim_t = anim_t + dt * 1.5
     if anim_t >= 1 then anim_t = anim_t - 1; anim_f = 1 - anim_f end
     if state == "wave" and state_t > 1.4 then set_state("play")
@@ -637,8 +763,7 @@ function on_update(dt)
     led.gradient(1, (math.cos(t * 1.5) + 1) / 2, 0.3)
     led.show()
   elseif state == "over" then
-    led_cd = led_cd - dt
-    if led_cd <= 0 then led.pulse(255, 0, 0, 500); led_cd = 0.8 end
+    if t >= led_cd then led.pulse(255, 0, 0, 500); led_cd = t + 0.8 end
   end
 
   update_effects(dt)
@@ -651,6 +776,8 @@ function on_draw()
     draw_about()
   elseif state == "over" then
     draw_over()
+  elseif state == "qr" then
+    draw_qr()
   else
     draw_world()
     if state == "wave" then
@@ -672,7 +799,10 @@ function on_button(key, pressed)
     elseif key == "right" or key == "down" then set_state("about")
     elseif key == "b" then badge.system.exit() end
   elseif state == "about" then
-    if key == "b" or key == "left" or key == "a" then set_state("title") end
+    if key == "down" then qr_return = state; set_state("qr")
+    elseif key == "b" or key == "left" or key == "a" then set_state("title") end
+  elseif state == "qr" then
+    if key == "b" or key == "up" then set_state(qr_return) end
   elseif state == "play" then
     if key == "b" then set_state("pause") end
   elseif state == "pause" then
@@ -681,10 +811,29 @@ function on_button(key, pressed)
   elseif state == "over" then
     if state_t > 0.8 then
       if key == "a" then new_game()
+      elseif key == "down" then qr_return = state; set_state("qr")
       elseif key == "right" then set_state("about")
       elseif key == "b" then set_state("title") end
     end
   end
+end
+
+-- A fresh, plain snapshot for the headless harness.
+function __state()
+  local out = {
+    mode = state, score = score, best = best, lives = lives, wave = wave, alive = alive,
+    aliens = {}, popups = {}, breached = breached,
+  }
+  for i, a in ipairs(aliens) do
+    out.aliens[i] = {
+      type = KINDS[a.kind].name, name = a.name,
+      hits_left = a.hits_left, alive = a.alive,
+    }
+  end
+  for i, p in ipairs(popups) do out.popups[i] = p.text end
+  if killer then out.killer = { type = killer.type, name = killer.name } end
+  if ufo then out.boss = { name = ufo.name } end
+  return out
 end
 
 function on_stop()
