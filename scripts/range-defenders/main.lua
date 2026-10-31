@@ -791,6 +791,12 @@ function on_update(dt)
   if state == "play" then
     update_play(dt)
   else
+    -- Combat clocks only run during play: pausing, dying or a wave banner
+    -- must not bank shots that all fire on the first play frame.
+    if state == "pause" or state == "dying" or state == "wave" then
+      fire_cd, enemy_cd = fire_cd + dt, enemy_cd + dt
+      if not ufo then ufo_cd = ufo_cd + dt end
+    end
     anim_t = anim_t + dt * 1.5
     if anim_t >= 1 then anim_t = anim_t - 1; anim_f = 1 - anim_f end
     if state == "wave" and state_t > 1.4 then set_state("play")

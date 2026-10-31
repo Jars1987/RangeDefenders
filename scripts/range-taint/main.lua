@@ -368,7 +368,10 @@ function on_espnow(mac, data, rssi)
     if seen_end(m.round) then return end
   end
   if m.kind == "H" then
-    if m.round ~= IDLE and m.remain > 0 then
+    -- A finished badge stays on its end screen until the player presses
+    -- SELECT; only then may it join the next round heard on the air.
+    local on_end = mode == "end" or (mode == "qr" and qr_return == "end")
+    if m.round ~= IDLE and m.remain > 0 and not (on_end and not active()) then
       if not active() or m.round < radio.id then
         reset_round(m.round, m.remain)
       end
@@ -390,7 +393,7 @@ function on_espnow(mac, data, rssi)
       accept_answer(radio, mac, m.res, m.hop)
     end
   elseif m.kind == "P" and m.parent == own_mac and not radio.children[mac]
-      and m.hop == radio.hop + 1 then
+      and m.hop == radio.hop + 1 and roster[mac] and count(radio.children) < 20 then
     radio.children[mac] = true
     award(radio, 25)
   end
