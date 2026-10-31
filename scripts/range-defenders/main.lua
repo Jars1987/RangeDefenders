@@ -15,9 +15,9 @@ local SNAPSHOT = { generated = "placeholder", source = "Range Risk API", entries
   {a="PLACEHOLDEREXPLOIT0000000000000001", t="EXPLOIT", s=10},
   {a="PLACEHOLDEREXPLOIT0000000000000002", t="EXPLOIT", s=9},
   {a="PLACEHOLDEREXPLOIT0000000000000003", t="EXPLOIT", s=8},
-  {a="PLACEHOLDERPHISHING000000000000001", t="PHISHING", s=10},
-  {a="PLACEHOLDERPHISHING000000000000002", t="PHISHING", s=8},
-  {a="PLACEHOLDERPHISHING000000000000003", t="PHISHING", s=7},
+  {a="PLACEHOLDERSCAM00000000000000000001", t="SCAM", s=10},
+  {a="PLACEHOLDERSCAM00000000000000000002", t="SCAM", s=8},
+  {a="PLACEHOLDERSCAM00000000000000000003", t="SCAM", s=7},
   {a="PLACEHOLDERMIXER00000000000000001", t="MIXER", s=10},
   {a="PLACEHOLDERMIXER00000000000000002", t="MIXER", s=9},
   {a="PLACEHOLDERMIXER00000000000000003", t="MIXER", s=7},
@@ -75,7 +75,7 @@ local LB = input.label("b")      -- "CANCEL"
 -- The malicious actors. Row 1 is the top row.
 local KINDS = {
   { name = "EXPLOIT", pts = 40, color = g.RED,            alert = "Exploit-linked wallet" },
-  { name = "PHISHING", pts = 30, color = g.ORANGE,        alert = "Phishing address" },
+  { name = "SCAM",     pts = 30, color = g.ORANGE,        alert = "Scam wallet" },
   { name = "MIXER",   pts = 20, color = g.YELLOW,         alert = "Mixer deposit" },
   { name = "DRAINER", pts = 10, color = g.SOLANA_MAGENTA, alert = "Wallet drainer" },
 }
@@ -474,7 +474,7 @@ local function draw_alien(kind, x, y, f, white)
       g.line(x + 15, y + 10, x + 13, y + 13, c)
     end
   elseif kind == 2 then
-    -- PHISHING: crab with snapping claws
+    -- SCAM: crab with snapping claws
     g.fill_round_rect(x + 4, y + 3, 12, 8, 2, c)
     g.line(x + 7, y + 3, x + 5, y, c)
     g.line(x + 13, y + 3, x + 15, y, c)
