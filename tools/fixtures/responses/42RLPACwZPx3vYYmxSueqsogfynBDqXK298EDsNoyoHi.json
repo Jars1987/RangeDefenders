@@ -1,0 +1,34 @@
+{
+ "address": "42RLPACwZPx3vYYmxSueqsogfynBDqXK298EDsNoyoHi",
+ "riskScore": 10,
+ "riskLevel": "CRITICAL RISK (directly malicious)",
+ "numHops": 0,
+ "maliciousAddressesFound": [
+  {
+   "address": "42RLPACwZPx3vYYmxSueqsogfynBDqXK298EDsNoyoHi",
+   "network": "solana",
+   "distance": 0,
+   "name_tag": null,
+   "entity": null,
+   "category": "Multi-Provider Blacklist & OFAC Sanctioned",
+   "risk_categories": [
+    "compliance-risk",
+    "blacklisted",
+    "ofac-sanctioned"
+   ]
+  }
+ ],
+ "reasoning": "Address is directly flagged for malicious activity.",
+ "attribution": {
+  "address": "42RLPACwZPx3vYYmxSueqsogfynBDqXK298EDsNoyoHi",
+  "network": "solana",
+  "name_tag": null,
+  "entity": null,
+  "category": "Multi-Provider Blacklist & OFAC Sanctioned",
+  "risk_categories": [
+   "compliance-risk",
+   "blacklisted",
+   "ofac-sanctioned"
+  ]
+ }
+}

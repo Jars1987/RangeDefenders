@@ -1,0 +1,32 @@
+{
+ "address": "Htp9MGP8Tig923ZFY7Qf2zzbMUmYneFRAhSp7vSg4wxV",
+ "riskScore": 10,
+ "riskLevel": "CRITICAL RISK (directly malicious)",
+ "numHops": 0,
+ "maliciousAddressesFound": [
+  {
+   "address": "Htp9MGP8Tig923ZFY7Qf2zzbMUmYneFRAhSp7vSg4wxV",
+   "network": "solana",
+   "distance": 0,
+   "name_tag": null,
+   "entity": null,
+   "category": "Hack",
+   "risk_categories": [
+    "hack",
+    "security-risk"
+   ]
+  }
+ ],
+ "reasoning": "Address is directly flagged for malicious activity.",
+ "attribution": {
+  "address": "Htp9MGP8Tig923ZFY7Qf2zzbMUmYneFRAhSp7vSg4wxV",
+  "network": "solana",
+  "name_tag": null,
+  "entity": null,
+  "category": "Hack",
+  "risk_categories": [
+   "hack",
+   "security-risk"
+  ]
+ }
+}

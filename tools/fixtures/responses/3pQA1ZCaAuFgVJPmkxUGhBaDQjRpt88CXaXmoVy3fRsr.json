@@ -1,0 +1,32 @@
+{
+ "address": "3pQA1ZCaAuFgVJPmkxUGhBaDQjRpt88CXaXmoVy3fRsr",
+ "riskScore": 10,
+ "riskLevel": "CRITICAL RISK (directly malicious)",
+ "numHops": 0,
+ "maliciousAddressesFound": [
+  {
+   "address": "3pQA1ZCaAuFgVJPmkxUGhBaDQjRpt88CXaXmoVy3fRsr",
+   "network": "solana",
+   "distance": 0,
+   "name_tag": null,
+   "entity": null,
+   "category": null,
+   "risk_categories": [
+    "rug-pull",
+    "scam"
+   ]
+  }
+ ],
+ "reasoning": "Address is directly flagged for malicious activity.",
+ "attribution": {
+  "address": "3pQA1ZCaAuFgVJPmkxUGhBaDQjRpt88CXaXmoVy3fRsr",
+  "network": "solana",
+  "name_tag": null,
+  "entity": null,
+  "category": null,
+  "risk_categories": [
+   "rug-pull",
+   "scam"
+  ]
+ }
+}

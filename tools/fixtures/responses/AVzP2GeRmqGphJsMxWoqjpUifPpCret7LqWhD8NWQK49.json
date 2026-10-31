@@ -1,0 +1,34 @@
+{
+ "address": "AVzP2GeRmqGphJsMxWoqjpUifPpCret7LqWhD8NWQK49",
+ "riskScore": 10,
+ "riskLevel": "CRITICAL RISK (directly malicious)",
+ "numHops": 0,
+ "maliciousAddressesFound": [
+  {
+   "address": "AVzP2GeRmqGphJsMxWoqjpUifPpCret7LqWhD8NWQK49",
+   "network": "solana",
+   "distance": 0,
+   "name_tag": null,
+   "entity": null,
+   "category": null,
+   "risk_categories": [
+    "exploit",
+    "stolen-funds",
+    "money-laundering"
+   ]
+  }
+ ],
+ "reasoning": "Address is directly flagged for malicious activity.",
+ "attribution": {
+  "address": "AVzP2GeRmqGphJsMxWoqjpUifPpCret7LqWhD8NWQK49",
+  "network": "solana",
+  "name_tag": null,
+  "entity": null,
+  "category": null,
+  "risk_categories": [
+   "exploit",
+   "stolen-funds",
+   "money-laundering"
+  ]
+ }
+}

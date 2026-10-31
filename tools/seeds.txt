@@ -1,0 +1,40 @@
+# Range invaders snapshot seeds. Verified 2026-10-31 with direct
+# GET /v1/risk/address?network=solana calls: every address scored >= 7 and
+# carries its own attribution. Grouped by the type build_snapshot.py assigns.
+
+# EXPLOIT: own category Hack/Exploit, label does not name a victim
+2oP36hojo3spVLvrhqNVW8ERUEYMKFAS2XVAmFv289WJ
+Htp9MGP8Tig923ZFY7Qf2zzbMUmYneFRAhSp7vSg4wxV
+CEzN7mqP9xoxn2HdyW6fjEJ73t7qaX9Rp2zyS6hb3iEu
+5WwBYgQG6BdErM2nNNyUmQXfcUnB68b6kesxBywh1J3n
+GeEccGJ9BEzVbVor1njkBCCiqXJbXVeDHaXDCrBDbmuy
+HYaQcKPcWgLe7gpA99EUbDSGuzJCupNVCRXmXP37xYXv
+5XiqTJQBTZKcGjcbCydZvf9NzhE2R3g7GDx1yKHxs8jd
+BxnUi6jyYbtEEgkBq4bPLKzDpSfWVAzgyf3TF2jfC1my
+DCQATk3kKtf2cVns52eYMK5jopyNrUgVBNTaodGSZ6pp
+2iLuEtoyaCM1Pin7PSMeKGnjFCVtcm3yyosB3gf4op8i
+
+# MIXER: own risk_categories include money-laundering, no victim in the label
+AVzP2GeRmqGphJsMxWoqjpUifPpCret7LqWhD8NWQK49
+H7PiGqqUaanBovwKgEtreJbKmQe6dbq6VTrw6guy7ZgL
+HkGz4KmoZ7Zmk7HN6ndJ31UJ1qZ2qgwQxgVqQwovpZES
+57ZJ6dXxCEwZPJ9BEyKb5xjGZvGg4hqDALLbiRUFbsjM
+7Z73Wkgcfc5xWUhSLHu6McBZHhGEg7VZvunsvN21ipsu
+FMR4UZ9odhv7Z9GF4SDgUGh52Wz8jhu7Xn4RAnkZDuad
+7NuooRLhhtQx412t6giQmYo24r6HpiRoaWFEaaPBNCCU
+6fHfN98CrC786CSfSRaLNB61gdgs7dveVgvmWcsw1GGd
+EnjbZEian6jJe2cYvShn2prFrqVZYoszWpxiqFDTB5sk
+dHkm17KBMg4xqe4ZURoyH1u9WycxyzAgbGVutWRLMaf
+Hp53XEtt4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp
+
+# DRAINER: own label names a wallet-drainer kit
+CaNCU6LiZUKc7Su3avu5jDbdDXdKeAmv625c4M11111
+Qcsb89L6QS74b56PpxvygajsXKx1CnBSqnQ5gq11111
+TdnNjtovxBmRZmg76oHhTgpVfWQYa4CCfTUNxU11111
+gYs5v8LBaTNRFhU8rSSFeEqaCQPjmkT28naAN711111
+iBGtY2LBEmTiVrmPCgHRGdCPZJcDEmmkDxbLhV11111
+np84cd63UoFj2pbR7QU226hKg8e5w6j2hN4poa11111
+
+# SCAM: own risk_categories include rug-pull and scam; wallets, not token mints
+3pQA1ZCaAuFgVJPmkxUGhBaDQjRpt88CXaXmoVy3fRsr
+3odTMNgv5ViWXYoiZCwXuMbk8FTdJkpwvEHJfosuATos
