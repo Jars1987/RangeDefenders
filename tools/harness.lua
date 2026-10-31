@@ -1,4 +1,5 @@
--- Run with Lua 5.4 from the repo root. No game code or state is mutated.
+-- Run with Lua 5.4 from the repo root. Game source is never rewritten.
+-- Gameplay uses normal controls; isolated effect checks call the popup helper.
 local Stub = dofile('tools/badge_stub.lua')
 local H = {devices={}, details={}, dump=nil, final=false,
   invaders='scripts/range-defenders/main.lua', taint='scripts/range-taint/main.lua'}
@@ -25,19 +26,10 @@ local function contains(d,needle,current)
   else for s in pairs(d.seen) do if s:find(needle,1,true) then return true end end end
   return false
 end
-local function snapshot_source(source)
-  local fixture=read('tools/fixtures/test_snapshot.lua'):gsub('^%s*return%s+','local SNAPSHOT = ')
-  local pattern='(%-%- BEGIN GENERATED SNAPSHOT\n).-([\r\n]%-%- END GENERATED SNAPSHOT)'
-  local n; source,n=source:gsub(pattern,function(a,b) return a..fixture:gsub('%s+$','')..b end)
-  eq(n,1,'Invaders needs exactly one generated SNAPSHOT block')
-  return source
-end
-local function device(path,seed,opts,replace)
+local function device(path,seed,opts)
   opts=opts or {}; opts.seed=seed or 7
   local d=Stub.new(opts); H.devices[#H.devices+1]=d
-  local source=read(path)
-  if replace then source=snapshot_source(source) end
-  return d:load(source,path)
+  return d:load(read(path),path)
 end
 local function step(d,n,controller)
   for frame=1,n do if controller then controller(d,frame) end; d:tick() end
@@ -127,8 +119,8 @@ local function bot(d,f)
 end
 
 local scenarios={}
-function scenarios.invaders_play(real)
-  local d=device(H.invaders,17,nil,not real)
+function scenarios.invaders_play()
+  local d=device(H.invaders,17)
   eq(d:state().mode,'title'); tap(d,'right'); eq(d:state().mode,'about'); tap(d,'b')
   tap(d,'a')
   local initial,hit,dead,waves={},{},{},{}
@@ -153,7 +145,7 @@ function scenarios.invaders_play(real)
           if a.hits_left==2 and b.alive and b.hits_left==1 then hit[j]=true; tough=tough+1 end
           if not b.alive then
             kills=kills+1; dead[j]=true
-            local expected=a.type..(a.addr and (' '..a.addr:sub(1,4)..'..'..a.addr:sub(-4)) or '')
+            local expected=a.name..' +'..({40,30,20,10})[(j-1)//8+1]
             local found=false
             for _,p in ipairs(now.popups) do if p==expected then found=true end end
             check(found,'kill popup does not equal dead slot attribution: '..expected)
@@ -162,11 +154,11 @@ function scenarios.invaders_play(real)
         end
       end
     end
-    if real then for _,text in ipairs(d.texts) do check(not text.text:lower():find('placeholder',1,true),'placeholder text on screen') end end
+    if H.final then for _,text in ipairs(d.texts) do check(not text.text:lower():find('placeholder',1,true),'placeholder text on screen') end end
     prev=now
   end
   check(kills>0,'bot produced no kills')
-  if not real then check(tough>0,'bot never hit a tough invader') end
+  check(tough>0,'bot never hit a tough invader')
   hold(d,'a',false); hold(d,'up',false)
   check(until_(d,18000,function(s) return s.mode=='over' end),'no game over')
   local s=d:state()
@@ -175,14 +167,14 @@ function scenarios.invaders_play(real)
   check(contains(d,'RANGE ALERT',true),'RANGE ALERT missing')
   step(d,60); qr(d,'over')
   check(contains(d,'Screen Solana addresses with Range'),'QR caption missing')
-  note((real and 'real ' or '')..'kills='..kills..' tough_hits='..tough)
+  note('kills='..kills..' tough_hits='..tough)
 end
 
 function scenarios.invaders_killer()
   -- Search fixed seeds using only inputs. Observe a bullet at launch, kill its
   -- known shooter, then steer underneath that same still-airborne bullet.
   for seed=1,32 do
-    local d=device(H.invaders,seed,nil,true); tap(d,'a')
+    local d=device(H.invaders,seed); tap(d,'a')
     local seen,target={},nil
     for f=1,4800 do
       local s=d:state(); if s.mode=='over' then break end
@@ -199,7 +191,7 @@ function scenarios.invaders_killer()
           end end
           if not target and best and dist<8 then
             local a=s.aliens[best]
-            if a and a.addr then target={bullet=b,slot=best,addr=a.addr,dead=false,lives=s.lives} end
+            if a and a.name then target={bullet=b,slot=best,name=a.name,dead=false,lives=s.lives} end
           end
         end
       end
@@ -214,11 +206,11 @@ function scenarios.invaders_killer()
       elseif s.mode=='play' then hold(d,'a',false); avoid(d) end
       local before=s; d:tick(); local after=d:state()
       if target and target.dead and after.lives<before.lives then
-        eq(after.killer and after.killer.addr,target.addr,'bullet lost dead shooter attribution')
+        eq(after.killer and after.killer.name,target.name,'bullet lost dead shooter attribution')
         if after.mode=='over' then
           check(contains(d,'Flagged:',true),'Flagged: missing')
-          check(contains(d,target.addr:sub(1,4)..'..'..target.addr:sub(-4),true),'original shooter not displayed')
-          note('seed='..seed..' dead shooter='..target.addr)
+          check(contains(d,'Flagged:  '..target.name,true),'original shooter not displayed')
+          note('seed='..seed..' dead shooter='..target.name)
           return
         end
         target=nil
@@ -230,7 +222,7 @@ end
 
 function scenarios.invaders_breach()
   for seed=1,12 do
-    local d=device(H.invaders,seed,nil,true); tap(d,'a')
+    local d=device(H.invaders,seed); tap(d,'a')
     for _=1,20000 do
       local before=d:state(); if before.mode=='over' then break end
       avoid(d); d:tick(); local s=d:state()
@@ -242,7 +234,8 @@ function scenarios.invaders_breach()
           if not slot or (j-1)//8>(slot-1)//8 then slot=j end
         end end
         check(slot,'no live alien before breach')
-        eq(s.killer and s.killer.addr,before.aliens[slot].addr,'lowest row, leftmost breach address')
+        eq(s.killer and s.killer.name,before.aliens[slot].name,'lowest row, leftmost breach name')
+        check(contains(d,'Flagged:  '..before.aliens[slot].name,true),'breaching name missing')
         check(contains(d,'threats got through',true),'breach text missing')
         note('seed='..seed..' breached='..s.breached); return
       end
@@ -269,7 +262,7 @@ function scenarios.invaders_pause()
     end
   end
   for seed=1,16 do
-    local d=device(H.invaders,seed,nil,true); tap(d,'a')
+    local d=device(H.invaders,seed); tap(d,'a')
     check(until_(d,300,function(s) return s.mode=='play' end),'play did not start')
     -- Pause just after a shot, so the next shot has at least 0.25 s left.
     check(until_(d,180,function() return next(bullets(d))~=nil end),'no initial enemy bullet')
@@ -301,6 +294,81 @@ function scenarios.invaders_pause()
     end
   end
   error('no lost-life cooldown case found in fixed seeds 1..16')
+end
+
+function scenarios.invaders_names()
+  local pools={
+    {'WORMHOLE HACKER','BYBIT HACKER','BRIDGE HACKER','RAYDIUM HACKER',
+      'SOLEND HACKER','CREMA HACKER','NIRVANA HACKER','CYPHER HACKER',
+      'LOOPSCALE HACKER','DEXX HACKER','DEFITUNA HACKER'},
+    {'PUMP AND DUMP','SCAM COIN','RUG PULL DEV','PRESALE SCAMMER','FAKE AIRDROP'},
+    {'LAZARUS','DPRK WALLET 1','DPRK WALLET 2','LAUNDERING HOP'},
+    {'RAINBOW DRAINER','WALLET DRAINER','FAKE MINT SITE'},
+  }
+  local types={'EXPLOIT','SCAM','MIXER','DRAINER'}
+  local d=device(H.invaders,17)
+  check(contains(d,'LAZARUS BOSS',true),'title boss name missing')
+  check(contains(d,'Screen threats before funds move',true),'title caption missing')
+  tap(d,'right'); eq(d:state().mode,'about'); qr(d,'about'); tap(d,'b'); tap(d,'a')
+  local twin=device(H.invaders,17); tap(twin,'a')
+  local kinds=locals(d).KINDS
+  for row,pool in ipairs(pools) do
+    eq(#kinds[row].names,#pool,'row pool size')
+    for j,name in ipairs(pool) do eq(kinds[row].names[j],name,'fixed roster') end
+  end
+  for j,a in ipairs(d:state().aliens) do eq(a.name,twin:state().aliens[j].name,'seed replay name') end
+  local function roster(s)
+    local seen={{},{},{},{}}
+    for j,a in ipairs(s.aliens) do
+      local row=(j-1)//8+1
+      eq(a.type,types[row],'alien row type')
+      local expected=pools[row][((j-1)%8+s.wave-1)%#pools[row]+1]
+      eq(a.name,expected,'row pool assignment')
+      seen[row][a.name]=true
+    end
+    for row,pool in ipairs(pools) do
+      local n=0; for _ in pairs(seen[row]) do n=n+1 end
+      eq(n,math.min(8,#pool),'row variety')
+    end
+  end
+  local boss=false
+  local function inspect(s)
+    roster(s)
+    if s.boss then eq(s.boss.name,'LAZARUS','mothership name'); boss=true end
+  end
+  for f=1,3600 do bot(d,f); d:tick(); inspect(d:state()) end
+  hold(d,'a',false); hold(d,'up',false)
+  check(until_(d,18000,function(s) inspect(s); return s.mode=='over' end),'named game did not finish')
+  check(boss,'no mothership observed')
+  check(contains(d,'Flagged:  '..d:state().killer.name,true),'alert name missing')
+  check(contains(d,'Funds moved to a flagged wallet',true),'alert caption missing')
+  check(not contains(d,'Risk:'),'risk score rendered')
+  step(d,60); qr(d,'over')
+  for text in pairs(d.seen) do
+    for token in text:gmatch('[1-9A-HJ-NP-Za-km-z]+') do
+      check(#token<32,'wallet-like token rendered: '..token)
+    end
+  end
+  -- Exercise the real popup helper at both edges in an isolated device.
+  -- Only transient effects are added; gameplay scenarios use normal controls.
+  local effects=device(H.invaders,17); tap(effects,'a')
+  local popup=assert(locals(effects).popup,'popup helper missing')
+  local count=0
+  for _,name in ipairs({'LOOPSCALE HACKER','DEFITUNA HACKER'}) do
+    local text=name..' +40'
+    local width=effects.badge.gfx.text_width(text)
+    check(width<=320,'longest popup wider than screen')
+    for _,x in ipairs({0,320}) do
+      popup(x,80,text,effects.badge.gfx.WHITE); effects:draw()
+      local rendered=effects.texts[#effects.texts]
+      for _,call in ipairs(effects.texts) do if call.text==text then rendered=call end end
+      eq(rendered.text,text,'long popup not drawn')
+      check(rendered.x>=0 and rendered.x+width<=320,'long popup clips screen')
+      eq(rendered.x,x==0 and 0 or 320-width,'popup edge clamp')
+      count=count+1
+    end
+  end
+  note('fixed row pools, seeded variety, LAZARUS boss, full-game text; edge popups='..count)
 end
 
 local function network(n,opts)
@@ -597,12 +665,12 @@ end
 -- SDK boundaries, input ordering, isolated RNG/kv/env, bus faults and QR pixels.
 -- Tiny fixture apps are not substitutes for running `all` after game merge.
 function scenarios.self_test()
-  local d=device('tools/fixtures/invaders.lua',1,nil,true)
+  local d=device('tools/fixtures/invaders.lua',1)
   eq(d:state().mode,'title'); tap(d,'a'); eq(d:state().mode,'play')
   hold(d,'a',true); step(d,12); hold(d,'a',false); step(d,1)
   check(d:state().score>0,'fixture controls did not score')
-  local copy=d:state(); copy.aliens[1].addr='changed'
-  check(d:state().aliens[1].addr~='changed','state hook leaked a mutable reference')
+  local copy=d:state(); copy.aliens[1].name='changed'
+  check(d:state().aliens[1].name~='changed','state hook leaked a mutable reference')
   step(d,40); eq(d:state().mode,'over'); eq(tonumber(d.kv.best),d:state().best)
   qr(d,'over')
   local bad={{function() d.badge.gfx.fill_rect(.5,0,1,1,0) end,'fractional gfx'},
@@ -635,7 +703,7 @@ function scenarios.self_test()
   note('guards, framebuffer, input, kv, isolated environments, deterministic bus faults')
 end
 
-local order={'invaders_play','invaders_killer','invaders_breach','invaders_pause','taint_2','taint_arbitration',
+local order={'invaders_play','invaders_killer','invaders_breach','invaders_pause','invaders_names','taint_2','taint_arbitration',
   'taint_protocol','taint_4_lossy','taint_20','taint_practice_timeout','taint_practice_win','taint_restart',
   'taint_end_screen','taint_p_flood'}
 local selected=scenario=='all' and order or {scenario}
@@ -649,7 +717,6 @@ for _,name in ipairs(selected) do
       for _,path in ipairs(paths) do check(not read(path):lower():find('placeholder',1,true),'remaining placeholder in '..path) end
     end
     scenarios[name]()
-    if name=='invaders_play' and H.final then scenarios.invaders_play(true) end
   end,debug.traceback)
   local ms=0; for _,d in ipairs(H.devices) do ms=math.max(ms,d.max_ms) end
   if ok then print('PASS '..name..string.format(' max_callback_ms=%.3f',ms)..(#H.details>0 and ' '..table.concat(H.details,'; ') or ''))

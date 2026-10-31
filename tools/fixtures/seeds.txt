@@ -1,5 +1,0 @@
-# fixtures: EXPLOIT, SCAM, MIXER (multi-flag precedence), excluded sanctions-only
-Htp9MGP8Tig923ZFY7Qf2zzbMUmYneFRAhSp7vSg4wxV
-3pQA1ZCaAuFgVJPmkxUGhBaDQjRpt88CXaXmoVy3fRsr
-AVzP2GeRmqGphJsMxWoqjpUifPpCret7LqWhD8NWQK49
-42RLPACwZPx3vYYmxSueqsogfynBDqXK298EDsNoyoHi

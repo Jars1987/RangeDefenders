@@ -10,39 +10,6 @@ local input = badge.input
 local led   = badge.led
 local kv    = badge.storage.kv
 
--- BEGIN GENERATED SNAPSHOT
-local SNAPSHOT = { generated = "2026-10-31", source = "Range Risk API", entries = {
-    {a="2iLuEtoyaCM1Pin7PSMeKGnjFCVtcm3yyosB3gf4op8i", t="EXPLOIT", s=10},
-    {a="2oP36hojo3spVLvrhqNVW8ERUEYMKFAS2XVAmFv289WJ", t="EXPLOIT", s=10},
-    {a="5WwBYgQG6BdErM2nNNyUmQXfcUnB68b6kesxBywh1J3n", t="EXPLOIT", s=10},
-    {a="5XiqTJQBTZKcGjcbCydZvf9NzhE2R3g7GDx1yKHxs8jd", t="EXPLOIT", s=10},
-    {a="BxnUi6jyYbtEEgkBq4bPLKzDpSfWVAzgyf3TF2jfC1my", t="EXPLOIT", s=10},
-    {a="CEzN7mqP9xoxn2HdyW6fjEJ73t7qaX9Rp2zyS6hb3iEu", t="EXPLOIT", s=10},
-    {a="DCQATk3kKtf2cVns52eYMK5jopyNrUgVBNTaodGSZ6pp", t="EXPLOIT", s=10},
-    {a="GeEccGJ9BEzVbVor1njkBCCiqXJbXVeDHaXDCrBDbmuy", t="EXPLOIT", s=10},
-    {a="HYaQcKPcWgLe7gpA99EUbDSGuzJCupNVCRXmXP37xYXv", t="EXPLOIT", s=10},
-    {a="Htp9MGP8Tig923ZFY7Qf2zzbMUmYneFRAhSp7vSg4wxV", t="EXPLOIT", s=10},
-    {a="3odTMNgv5ViWXYoiZCwXuMbk8FTdJkpwvEHJfosuATos", t="SCAM", s=10},
-    {a="3pQA1ZCaAuFgVJPmkxUGhBaDQjRpt88CXaXmoVy3fRsr", t="SCAM", s=10},
-    {a="57ZJ6dXxCEwZPJ9BEyKb5xjGZvGg4hqDALLbiRUFbsjM", t="MIXER", s=10},
-    {a="6fHfN98CrC786CSfSRaLNB61gdgs7dveVgvmWcsw1GGd", t="MIXER", s=10},
-    {a="7NuooRLhhtQx412t6giQmYo24r6HpiRoaWFEaaPBNCCU", t="MIXER", s=10},
-    {a="7Z73Wkgcfc5xWUhSLHu6McBZHhGEg7VZvunsvN21ipsu", t="MIXER", s=10},
-    {a="AVzP2GeRmqGphJsMxWoqjpUifPpCret7LqWhD8NWQK49", t="MIXER", s=10},
-    {a="EnjbZEian6jJe2cYvShn2prFrqVZYoszWpxiqFDTB5sk", t="MIXER", s=10},
-    {a="FMR4UZ9odhv7Z9GF4SDgUGh52Wz8jhu7Xn4RAnkZDuad", t="MIXER", s=10},
-    {a="H7PiGqqUaanBovwKgEtreJbKmQe6dbq6VTrw6guy7ZgL", t="MIXER", s=10},
-    {a="HkGz4KmoZ7Zmk7HN6ndJ31UJ1qZ2qgwQxgVqQwovpZES", t="MIXER", s=10},
-    {a="Hp53XEtt4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp", t="MIXER", s=10},
-    {a="dHkm17KBMg4xqe4ZURoyH1u9WycxyzAgbGVutWRLMaf", t="MIXER", s=10},
-    {a="CaNCU6LiZUKc7Su3avu5jDbdDXdKeAmv625c4M11111", t="DRAINER", s=10},
-    {a="Qcsb89L6QS74b56PpxvygajsXKx1CnBSqnQ5gq11111", t="DRAINER", s=10},
-    {a="TdnNjtovxBmRZmg76oHhTgpVfWQYa4CCfTUNxU11111", t="DRAINER", s=10},
-    {a="gYs5v8LBaTNRFhU8rSSFeEqaCQPjmkT28naAN711111", t="DRAINER", s=10},
-    {a="iBGtY2LBEmTiVrmPCgHRGdCPZJcDEmmkDxbLhV11111", t="DRAINER", s=10},
-    {a="np84cd63UoFj2pbR7QU226hKg8e5w6j2hN4poa11111", t="DRAINER", s=10}
-} }
--- END GENERATED SNAPSHOT
 -- BEGIN GENERATED QR
 local QR = { url = "https://www.range.org/product/transaction-screening?utm_source=event-breakpoint&utm_medium=qr&utm_campaign=always-on&utm_content=badge-invaders", size = 45, rows = {
   "111111100101001111001001001001111100101111111",
@@ -104,7 +71,6 @@ local ABOUT_LINES = {
   "Every transaction screened before the",
   "money moves. $35B+ on Solana protected.",
   "",
-  "Threat data: Range Risk API, " .. SNAPSHOT.generated,
   "Web:  " .. WEBSITE,
   "Code: github.com/Jars1987/RangeDefenders",
 }
@@ -129,11 +95,22 @@ local LB = input.label("b")      -- "CANCEL"
 
 -- The malicious actors. Row 1 is the top row.
 local KINDS = {
-  { name = "EXPLOIT", pts = 40, color = g.RED,            alert = "Exploit-linked wallet" },
-  { name = "SCAM",     pts = 30, color = g.ORANGE,        alert = "Scam wallet" },
-  { name = "MIXER",   pts = 20, color = g.YELLOW,         alert = "Mixer deposit" },
-  { name = "DRAINER", pts = 10, color = g.SOLANA_MAGENTA, alert = "Wallet drainer" },
+  { name = "EXPLOIT", pts = 40, color = g.RED, names = {
+    "WORMHOLE HACKER", "BYBIT HACKER", "BRIDGE HACKER", "RAYDIUM HACKER",
+    "SOLEND HACKER", "CREMA HACKER", "NIRVANA HACKER", "CYPHER HACKER",
+    "LOOPSCALE HACKER", "DEXX HACKER", "DEFITUNA HACKER",
+  } },
+  { name = "SCAM", pts = 30, color = g.ORANGE, names = {
+    "PUMP AND DUMP", "SCAM COIN", "RUG PULL DEV", "PRESALE SCAMMER", "FAKE AIRDROP",
+  } },
+  { name = "MIXER", pts = 20, color = g.YELLOW, names = {
+    "LAZARUS", "DPRK WALLET 1", "DPRK WALLET 2", "LAUNDERING HOP",
+  } },
+  { name = "DRAINER", pts = 10, color = g.SOLANA_MAGENTA, names = {
+    "RAINBOW DRAINER", "WALLET DRAINER", "FAKE MINT SITE",
+  } },
 }
+local BOSS_NAME = "LAZARUS"
 
 ---------------------------------------------------------------
 -- Helpers
@@ -147,27 +124,8 @@ end
 local function overlap(ax, ay, aw, ah, bx, by, bw, bh)
   return ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah
 end
-local function short_addr(entry, fallback)
-  if not entry then return fallback end
-  return entry.a:sub(1, 4) .. ".." .. entry.a:sub(-4)
-end
-local function identity(kind, entry)
-  local name = KINDS[kind].name
-  return entry and (name .. " " .. short_addr(entry, name)) or name
-end
-local function threat(kind, entry)
-  return { type = KINDS[kind].name, addr = entry and entry.a, s = entry and entry.s }
-end
-
-local entries = {}
-local boss_entry = nil
-for _, k in ipairs(KINDS) do entries[k.name] = {} end
-for _, entry in ipairs(SNAPSHOT.entries) do
-  local list = entries[entry.t]
-  if list then list[#list + 1] = entry end
-  if entry.t == "DRAINER" and (not boss_entry or entry.s > boss_entry.s) then
-    boss_entry = entry
-  end
+local function threat(kind, name)
+  return { type = KINDS[kind].name, name = name }
 end
 
 ---------------------------------------------------------------
@@ -221,16 +179,16 @@ local function build_wave()
   aliens = {}
   local tough, max_tough = 0, (COLS * ROWS) // 3
   for r = 0, ROWS - 1 do
-    local list = entries[KINDS[r + 1].name]
+    local names = KINDS[r + 1].names
     for c = 0, COLS - 1 do
-      local entry = #list > 0 and list[(c + wave - 1) % #list + 1] or nil
+      local name = names[(c + wave - 1) % #names + 1]
       local hits = 1
-      if entry and entry.s == 10 and tough < max_tough then
+      if tough < max_tough then
         hits, tough = 2, tough + 1
       end
       aliens[#aliens + 1] = {
         col = c, row = r, kind = r + 1, alive = true,
-        entry = entry, hits_left = hits, damaged = false, white_until = 0,
+        name = name, hits_left = hits, damaged = false, white_until = 0,
       }
     end
   end
@@ -329,9 +287,9 @@ local function game_over()
   set_state("over")
 end
 
-local function player_hit(kind, entry)
+local function player_hit(kind, name)
   lives = lives - 1
-  killer = threat(kind, entry)
+  killer = threat(kind, name)
   flash = t + 0.4
   burst(px + PW / 2, PY + PH / 2, g.SOLANA_GREEN, 20)
   led.pulse(255, 0, 0, 600)
@@ -394,7 +352,7 @@ local function update_play(dt)
   if bottom >= PY then
     for _, a in ipairs(aliens) do
       if a.alive and a.row == maxr then
-        killer = threat(a.kind, a.entry)
+        killer = threat(a.kind, a.name)
         break
       end
     end
@@ -417,7 +375,7 @@ local function update_play(dt)
     elseif ufo and overlap(b.x, b.y, 2, 6, ufo.x, UFO_Y, 30, 12) then
       score = score + ufo.pts
       burst(ufo.x + 15, UFO_Y + 6, g.CYAN, 18)
-      popup(ufo.x + 15, UFO_Y, "BOSS " .. short_addr(ufo.entry, "DRAINER") .. " +" .. ufo.pts, g.CYAN)
+      popup(ufo.x + 15, UFO_Y, ufo.name .. " +" .. ufo.pts, g.CYAN)
       led.pulse(0, 255, 255, 300)
       ufo = nil
       hit = true
@@ -435,7 +393,7 @@ local function update_play(dt)
               alive = alive - 1
               score = score + k.pts
               burst(ax + AW / 2, ay + AH / 2, k.color, 10)
-              popup(ax + AW / 2, ay, identity(a.kind, a.entry), k.color)
+              popup(ax + AW / 2, ay, a.name .. " +" .. k.pts, k.color)
               led.pulse(20, 241, 149, 150)
             end
             hit = true
@@ -463,7 +421,7 @@ local function update_play(dt)
       x = fx + s.col * COLSP + AW / 2 - 1,
       y = fy + s.row * ROWSP + AH,
       kind = s.kind,
-      type = KINDS[s.kind].name, entry = s.entry,
+      name = s.name,
     }
     enemy_cd = t + math.max(0.3, 1.3 - wave * 0.1 - (1 - ratio) * 0.5) * (0.6 + math.random() * 0.8)
   end
@@ -478,12 +436,12 @@ local function update_play(dt)
     elseif bunker_hit(b.x, b.y, 3, 7) then
       table.remove(ebullets, i)
     elseif overlap(b.x, b.y, 3, 7, px + 3, PY + 2, PW - 6, PH - 2) then
-      player_hit(b.kind, b.entry)
+      player_hit(b.kind, b.name)
       return
     end
   end
 
-  -- the drainer boss mothership
+  -- the Lazarus boss mothership
   if ufo then
     ufo.x = ufo.x + ufo.dir * 70 * dt
     if ufo.x < -40 or ufo.x > W + 40 then ufo = nil end
@@ -491,7 +449,7 @@ local function update_play(dt)
     if t >= ufo_cd then
       local dir = (math.random(2) == 1) and 1 or -1
       local pts = ({ 50, 100, 150, 300 })[math.random(4)]
-      ufo = { x = (dir == 1) and -30 or W, dir = dir, pts = pts, entry = boss_entry }
+      ufo = { x = (dir == 1) and -30 or W, dir = dir, pts = pts, name = BOSS_NAME }
       ufo_cd = t + math.random(15, 25)
     end
   end
@@ -679,10 +637,10 @@ local function draw_title()
   end
   local y = 96 + 4 * 19
   draw_ufo(lx - 5, y + 2)
-  g.text("DRAINER BOSS", lx + 30, y + 3, g.CYAN)
+  g.text("LAZARUS BOSS", lx + 30, y + 3, g.CYAN)
   g.text_right("??? pts", lx + 150, y + 3, g.MUTED)
 
-  g.text_center("Real flagged addresses, Range Risk API", W // 2, y + 19, g.MUTED)
+  g.text_center("Screen threats before funds move", W // 2, y + 19, g.MUTED)
   if I(t * 2) % 2 == 0 then
     g.text_center(LA .. " start  RIGHT about  " .. LB .. " exit", W // 2, y + 33, g.WHITE)
   end
@@ -716,13 +674,9 @@ local function draw_over()
   g.text_center("CRITICAL", 256, 28, g.WHITE)
   g.line(22, 48, 298, 48, g.BORDER)
 
-  g.text("Funds moved to a flagged address", 22, 58, g.ORANGE)
-  local flagged = killer and killer.type or "DRAINER"
-  if killer and killer.addr then
-    flagged = flagged .. " " .. short_addr({ a = killer.addr }, flagged)
-  end
+  g.text("Funds moved to a flagged wallet", 22, 58, g.ORANGE)
+  local flagged = killer and killer.name or "WALLET DRAINER"
   g.text("Flagged:  " .. flagged, 22, 88, g.WHITE)
-  if killer and killer.s then g.text("Risk:     " .. killer.s .. "/10", 22, 100, g.WHITE) end
   if breached > 0 then
     g.text(breached .. (breached == 1 and " threat got through" or " threats got through"), 22, 112, g.WHITE)
   else
@@ -872,13 +826,13 @@ function __state()
   }
   for i, a in ipairs(aliens) do
     out.aliens[i] = {
-      type = KINDS[a.kind].name, addr = a.entry and a.entry.a,
+      type = KINDS[a.kind].name, name = a.name,
       hits_left = a.hits_left, alive = a.alive,
     }
   end
   for i, p in ipairs(popups) do out.popups[i] = p.text end
-  if killer then out.killer = { type = killer.type, addr = killer.addr, s = killer.s } end
-  if ufo then out.boss = { addr = ufo.entry and ufo.entry.a } end
+  if killer then out.killer = { type = killer.type, name = killer.name } end
+  if ufo then out.boss = { name = ufo.name } end
   return out
 end
 

@@ -4,9 +4,10 @@ Two Lua games for the Solana Breakpoint "Scale or Die" badge: ESP32-S3, a
 320x240 display, D-pad, SELECT and CANCEL, two LEDs and ESP-NOW radio.
 
 **Range Invaders** is an offline arcade shooter. Screen out EXPLOIT, SCAM,
-MIXER and DRAINER threats. Each target carries an address from a baked snapshot
-verified against the Range Risk API. Kill popups show the matching address;
-RANGE ALERT identifies the threat that got through. Scan its QR to learn about
+MIXER and DRAINER threats. Targets are named Solana threats, combining real
+incidents with generic threat types. Kill popups show the target's name and
+points; RANGE ALERT shows the name of the threat that got through. Scan its
+QR to learn about
 [Range transaction screening](https://www.range.org/product/transaction-screening).
 
 **Taint** is a nearby-badge game about stolen funds moving wallet to wallet.
@@ -25,7 +26,7 @@ traffic or changes to your saved best score.
    the offer, then accept it with SELECT on the badge while in the launcher.
 
 The store installs only each app folder's `main.lua`, with a 96 KB limit.
-Both games are self-contained; they need no extra modules, images or API key.
+Both games are self-contained; they need no extra modules or images.
 Install from the branch containing the finished games if it has not reached
 the repository's default branch yet.
 
@@ -65,48 +66,6 @@ ESP-NOW is **unencrypted**. Taint is a game, **not a security control**.
 Badges need the same radio channel; joining different Wi-Fi access points can
 put them on different channels. Leave Wi-Fi off for badge-to-badge play and
 agree a channel. Practice works alone.
-
-## Regenerate the threat snapshot
-
-The builder uses Python's standard library. Supply `RANGE_API_KEY` through
-your environment, then run from the repository root:
-
-```sh
-python3 tools/build_snapshot.py --seeds tools/seeds.txt --date 2026-10-31 \
-  --write scripts/range-defenders/main.lua
-python3 tools/build_snapshot.py --seeds tools/seeds.txt --date 2026-10-31 \
-  --check scripts/range-defenders/main.lua
-```
-
-The Risk API key **never goes on a badge**, in Lua, in the seeds file or on
-the command line. The app makes no live Risk API calls and uses no proxy.
-`--check` reads and compares, returns 1 if stale and never rewrites the app.
-An explicit `--date YYYY-MM-DD` makes the generated timestamp reproducible;
-live API verdicts can still change. Preserve scrubbed responses with
-`--save-responses DIR` to replay a particular source set offline. Label-only
-attribution is intentionally removed by scrubbing and cannot be replayed.
-
-Only the queried address's own attribution or matching distance-zero records
-count. A drainer label wins first, then primary category, then risk categories,
-then label keywords. For the latter groups, precedence is SCAM, MIXER, EXPLOIT.
-The mapping table and exclusions are documented at the top of
-[`tools/build_snapshot.py`](tools/build_snapshot.py). Neighbour exposure,
-sanctions-only and victim/exchange records are excluded. Output contains only
-address, type and integer score 7..10, ordered EXPLOIT, SCAM, MIXER, DRAINER,
-then descending score and address. Names, entities and reasoning are not emitted.
-Any empty type fails unless explicitly allowed with `--allow-missing TYPE`.
-
-Offline fixture replay has no DRAINER entries, so allow that one missing type:
-
-```sh
-cp tools/fixtures/invaders.lua /tmp/range-fixture.lua
-python3 tools/build_snapshot.py --seeds tools/fixtures/seeds.txt \
-  --dry-run tools/fixtures/responses --date 2026-10-31 --allow-missing DRAINER \
-  --write /tmp/range-fixture.lua
-python3 tools/build_snapshot.py --seeds tools/fixtures/seeds.txt \
-  --dry-run tools/fixtures/responses --date 2026-10-31 --allow-missing DRAINER \
-  --check /tmp/range-fixture.lua
-```
 
 ## Regenerate the QR codes
 
@@ -151,19 +110,20 @@ zbarimg --quiet --raw /tmp/invaders-screen.pgm
 Each scenario prints one PASS/FAIL line with its maximum callback CPU time;
 any failure exits non-zero. Available scenarios:
 
-- `invaders_play`, `invaders_killer`, `invaders_breach`, `invaders_pause`.
+- `invaders_play`, `invaders_killer`, `invaders_breach`, `invaders_pause`, `invaders_names`.
 - `taint_2`, `taint_arbitration`, `taint_protocol`, `taint_4_lossy`, `taint_20`.
 - `taint_practice_timeout`, `taint_practice_win`, `taint_restart`.
 - `taint_end_screen`, `taint_p_flood`.
 
-Invaders tests replace only SNAPSHOT in an in-memory source copy with
-[`test_snapshot.lua`](tools/fixtures/test_snapshot.lua); they leave the files
-untouched. A bot uses normal controls, with a read-only geometry adapter for
+Invaders tests run the game source directly with its fixed roster of named
+threats. A bot uses normal controls, with a read-only geometry adapter for
 the original game's closure names (`px`, `fx`, `fy`, `aliens`, `ebullets`).
 Assertions use the public `__state()` hook and captured text. The killer
 scenario searches fixed seeds for a shot whose shooter is killed before that
-same bullet causes the fatal hit. `--final` also runs `invaders_play` on the
-unchanged real snapshot and rejects remaining placeholder source or text.
+same bullet causes the fatal hit, then checks the shooter's name on RANGE
+ALERT. The names scenario checks row pools, variety, the LAZARUS boss, text
+through a full game and popup bounds at both screen edges. `--final` rejects
+remaining placeholder source or text.
 `--invaders FILE` and `--taint FILE` select parallel worktree builds for testing.
 
 The stub creates a separate Lua environment, RNG, key state and in-memory kv

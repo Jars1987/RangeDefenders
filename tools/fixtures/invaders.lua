@@ -1,8 +1,11 @@
 -- Tiny SDK/lifecycle fixture, not a substitute for the production game.
 local g, input, kv = badge.gfx, badge.input, badge.storage.kv
--- BEGIN GENERATED SNAPSHOT
-local SNAPSHOT = { generated = "2026-10-31", source = "Range Risk API", entries = {} }
--- END GENERATED SNAPSHOT
+local THREATS = {
+  {name="WORMHOLE HACKER", type="EXPLOIT", hits=2},
+  {name="RUG PULL DEV", type="SCAM", hits=1},
+  {name="LAZARUS", type="MIXER", hits=2},
+  {name="WALLET DRAINER", type="DRAINER", hits=1},
+}
 -- BEGIN GENERATED QR
 local QR = { url = "https://www.range.org", size = 21, rows = {
 "101010101010101010101", "010101010101010101010", "101010101010101010101",
@@ -19,8 +22,8 @@ local aliens,popups={},{}
 function on_start()
   math.randomseed(string.unpack('<i4',badge.system.random_bytes(4)))
   best=tonumber(kv.get('best','0')) or 0
-  for j,e in ipairs(SNAPSHOT.entries) do
-    aliens[j]={type=e.t,addr=e.a,hits_left=e.s==10 and 2 or 1,alive=true}
+  for j,e in ipairs(THREATS) do
+    aliens[j]={type=e.type,name=e.name,hits_left=e.hits,alive=true}
   end
 end
 function on_update(dt)
@@ -32,7 +35,7 @@ function on_update(dt)
         a.hits_left=a.hits_left-1
         if a.hits_left==0 then
           a.alive=false; score=score+40
-          popups[#popups+1]=a.type..' '..a.addr:sub(1,4)..'..'..a.addr:sub(-4)
+          popups[#popups+1]=a.name..' +40'
         end
         break
       end end
@@ -72,7 +75,7 @@ function __state()
   local a,p={},{}
   local alive=0
   for j,v in ipairs(aliens) do
-    a[j]={type=v.type,addr=v.addr,hits_left=v.hits_left,alive=v.alive}
+    a[j]={type=v.type,name=v.name,hits_left=v.hits_left,alive=v.alive}
     if v.alive then alive=alive+1 end
   end
   for j,v in ipairs(popups) do p[j]=v end
