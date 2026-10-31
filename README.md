@@ -1,9 +1,9 @@
-# Range Invaders and Taint
+# Solana Defenders and Taint
 
 Two Lua games for the Solana Breakpoint "Scale or Die" badge: ESP32-S3, a
 320x240 display, D-pad, SELECT and CANCEL, two LEDs and ESP-NOW radio.
 
-**Range Invaders** is an offline arcade shooter. Screen out EXPLOIT, SCAM,
+**Solana Defenders** is an offline arcade shooter. Screen out EXPLOIT, SCAM,
 MIXER and DRAINER threats. Targets are named Solana threats, combining real
 incidents with generic threat types. Kill popups show the target's name and
 points; RANGE ALERT shows the name of the threat that got through. Scan its
@@ -22,7 +22,7 @@ traffic or changes to your saved best score.
    to the store's broker and copy its badge ID.
 2. Open the badge SDK web app's `/store` page. Enter the badge ID and this
    repository URL: `https://github.com/Jars1987/RangeDefenders`.
-3. Select **range-defenders** (Range Invaders) and **range-taint** (Taint), send
+3. Select **range-defenders** (Solana Defenders) and **range-taint** (Taint), send
    the offer, then accept it with SELECT on the badge while in the launcher.
 
 The store installs only each app folder's `main.lua`, with a 96 KB limit.
@@ -145,9 +145,9 @@ separate from these headless checks.
 
 ## Media
 
-![Range Invaders gameplay](media/range-invaders.gif)
+![Solana Defenders gameplay](media/solana-defenders.gif)
 
-[Range Invaders MP4](media/range-invaders.mp4)
+[Solana Defenders MP4](media/solana-defenders.mp4)
 
 ![Taint gameplay](media/taint.gif)
 
@@ -155,4 +155,4 @@ separate from these headless checks.
 
 ## Credits
 
-Range Invaders by Jose Santos. Taint by Range.
+Solana Defenders by Jose Santos. Taint by Range.

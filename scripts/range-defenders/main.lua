@@ -1,4 +1,4 @@
--- Range Invaders by Range: screen out Solana threats.
+-- Solana Defenders by Range: screen out Solana threats.
 -- Protect Solana from malicious actors.
 --
 -- Controls:  LEFT / RIGHT  move
@@ -623,8 +623,8 @@ local function draw_title()
   draw_stars()
   draw_bar(0)
   local p = (math.sin(t * 2) + 1) / 2
-  g.text_center("RANGE", W // 2, 12, g.gradient(p), 3)
-  g.text_center("INVADERS", W // 2, 38, g.gradient(1 - p), 3)
+  g.text_center("SOLANA", W // 2, 12, g.gradient(p), 3)
+  g.text_center("DEFENDERS", W // 2, 38, g.gradient(1 - p), 3)
   g.text_center("by Range", W // 2, 66, g.SOLANA_TEAL)
   g.text_center("Protect Solana", W // 2, 80, g.WHITE)
 
@@ -653,7 +653,7 @@ local function draw_about()
   draw_stars()
   draw_bar(0)
   g.text_center("ABOUT", W // 2, 14, g.SOLANA_GREEN, 2)
-  g.text_center("RANGE INVADERS by Range", W // 2, 38, g.WHITE)
+  g.text_center("SOLANA DEFENDERS by Range", W // 2, 38, g.WHITE)
   for i, line in ipairs(ABOUT_LINES) do
     g.text(line, 16, 60 + (i - 1) * 14, g.WHITE)
   end
@@ -729,7 +729,7 @@ function on_start()
   end
   led.take()
   best = tonumber(kv.get("best", "0")) or 0
-  badge.log("Range Invaders by Range - best " .. best)
+  badge.log("Solana Defenders by Range - best " .. best)
 end
 
 function on_update(dt)
