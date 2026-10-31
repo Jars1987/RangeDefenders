@@ -251,6 +251,58 @@ function scenarios.invaders_breach()
   error('no breach survived in fixed seeds 1..12')
 end
 
+function scenarios.invaders_pause()
+  local function bullets(d)
+    local list=locals(d).ebullets
+    check(type(list)=='table','geometry adapter: ebullets missing')
+    local known={}
+    for _,b in ipairs(list) do known[b]=true end
+    return known
+  end
+  local function quiet(d,known,phase,resume)
+    -- Include the SELECT callback's first update in the 15-frame window.
+    for f=1,15 do
+      if resume and f==1 then d:edge('a',true)
+      elseif resume and f==2 then d:edge('a',false) end
+      d:tick(); eq(d:state().mode,'play',phase..' did not resume play')
+      for b in pairs(bullets(d)) do check(known[b],phase..' spawned an enemy bullet within 0.25 s') end
+    end
+  end
+  for seed=1,16 do
+    local d=device(H.invaders,seed,nil,true); tap(d,'a')
+    check(until_(d,300,function(s) return s.mode=='play' end),'play did not start')
+    -- Pause just after a shot, so the next shot has at least 0.25 s left.
+    check(until_(d,180,function() return next(bullets(d))~=nil end),'no initial enemy bullet')
+    local l=locals(d)
+    check(l.enemy_cd-l.t>0.25,'pause precondition: next shot too close')
+    tap(d,'b'); eq(d:state().mode,'pause'); step(d,180)
+    eq(d:state().mode,'pause','three-second pause ended without input')
+    quiet(d,bullets(d),'pause',true)
+    -- Seek a real lost life with enough cooldown left at the instant of death.
+    -- Reading the deadline selects a reproducible case; assertions count shots.
+    for _=1,2400 do
+      local before=d:state(); if before.mode=='over' then break end
+      if before.mode=='play' then
+        local target
+        for _,b in ipairs(locals(d).ebullets) do if not target or b.y>target.y then target=b end end
+        if target then move(d,target.x+1) end
+      end
+      d:tick(); local after=d:state()
+      if after.mode=='dying' and after.lives<before.lives then
+        l=locals(d)
+        if l.enemy_cd-l.t>0.30 then
+          hold(d,'left',false); hold(d,'right',false)
+          check(until_(d,100,function(s) return s.mode=='play' end),'dying phase did not resume play')
+          quiet(d,bullets(d),'dying',false)
+          note('seed='..seed..' pause=3s; pause/dying first 15 frames: no enemy spawns')
+          return
+        end
+      end
+    end
+  end
+  error('no lost-life cooldown case found in fixed seeds 1..16')
+end
+
 local function network(n,opts)
   local bus=Stub.bus(opts)
   for j=1,n do
@@ -303,6 +355,59 @@ local function hello(round,st,hop,remain) return table.concat({'RT1','H',round,s
 local FAKE='0a:00:00:00:00:01'
 local OTHER='0a:00:00:00:00:02'
 local function inject(bus,d,mac,data,rssi) bus:inject(d,mac,data,rssi); bus:step() end
+function scenarios.taint_end_screen()
+  for _,result in ipairs({'FUNDS ESCAPED','CONTAINED'}) do
+    local bus,finished,starter=network(2)
+    starter.online=false
+    -- A clean late join either times out in one second or contains after LATENT.
+    inject(bus,finished,FAKE,hello('00000001','C',0,result=='CONTAINED' and 155 or 1))
+    check(waitnet(bus,1200,function() return finished:state().mode=='end' end),'round did not finish')
+    eq(finished:state().result,result,'end-screen precondition')
+    check(contains(finished,result,true),'finished result not displayed')
+    finished.online=false; starter.online=true
+    outbreak(bus,starter)
+    local new=starter:state().round
+    check(new~='00000001','new outbreak reused the finished round')
+    finished.online=true
+    for _=1,180 do
+      bus:step()
+      local s=finished:state()
+      eq(s.mode,'end','new outbreak dismissed the end screen')
+      eq(s.result,result,'new outbreak replaced the finished result')
+      eq(s.round,'00000000','finished badge adopted before SELECT')
+      check(contains(finished,result,true),'finished result disappeared from screen')
+    end
+    ntap(bus,finished,'a'); eq(finished:state().mode,'title','SELECT must return to title')
+    ntap(bus,finished,'a'); eq(finished:state().mode,'radar','SELECT must enter radar')
+    check(waitnet(bus,180,function() return finished:state().round==new end),'badge did not adopt after SELECT')
+    eq(finished:state().result,nil,'new round retained previous result')
+  end
+  note('both end results stay visible until SELECT; next round adopted afterwards')
+end
+
+function scenarios.taint_p_flood()
+  local bus,victim=network(1); outbreak(bus,victim)
+  local initial=victim:state()
+  local function mac(j) return string.format('0a:01:00:00:%02x:%02x',j//256,j%256) end
+  local report='RT1|P|'..initial.round..'|'..victim.mac..'|'..(initial.hop+1)
+  -- Deliver every report, avoiding the seven-packet cap masking the game bug.
+  for j=1,200 do inject(bus,victim,mac(j),report) end
+  local unknown=victim:state()
+  for j=201,230 do
+    -- Rotate through 30 roster members; each is present when its P arrives.
+    inject(bus,victim,mac(j),hello(initial.round,'T',initial.hop+1))
+    inject(bus,victim,mac(j),report)
+  end
+  local final=victim:state()
+  eq(bus.dropped,0,'flood was masked by inbound queue drops')
+  eq(unknown.score,initial.score,'non-roster P frames awarded points')
+  eq(unknown.children,initial.children,'non-roster P frames created children')
+  check(final.children<=20,'P flood exceeded the 20-child bound')
+  eq(final.children,20,'roster reports did not exercise the child limit')
+  eq(final.score-initial.score,20*25,'accepted children did not award exactly 25 points each')
+  note('200 non-roster reports: no awards; 30 roster reports: children='..final.children)
+end
+
 function scenarios.taint_arbitration()
   local bus,a,b=network(2)
   a.online=false; b.online=false
@@ -530,8 +635,9 @@ function scenarios.self_test()
   note('guards, framebuffer, input, kv, isolated environments, deterministic bus faults')
 end
 
-local order={'invaders_play','invaders_killer','invaders_breach','taint_2','taint_arbitration',
-  'taint_protocol','taint_4_lossy','taint_20','taint_practice_timeout','taint_practice_win','taint_restart'}
+local order={'invaders_play','invaders_killer','invaders_breach','invaders_pause','taint_2','taint_arbitration',
+  'taint_protocol','taint_4_lossy','taint_20','taint_practice_timeout','taint_practice_win','taint_restart',
+  'taint_end_screen','taint_p_flood'}
 local selected=scenario=='all' and order or {scenario}
 local failures=0
 for _,name in ipairs(selected) do

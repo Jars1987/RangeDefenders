@@ -135,7 +135,8 @@ stored in Lua and does not require segno.
 
 ## Headless tests
 
-Use **Lua 5.4**, not the bare `lua`/`luac` on this Mac (they are Lua 5.5):
+Use Lua 5.4, for example Homebrew `lua@5.4`; Lua 5.5 is not the badge runtime.
+The commands below use Homebrew's Apple Silicon installation path:
 
 ```sh
 python3 -m py_compile tools/*.py
@@ -150,9 +151,10 @@ zbarimg --quiet --raw /tmp/invaders-screen.pgm
 Each scenario prints one PASS/FAIL line with its maximum callback CPU time;
 any failure exits non-zero. Available scenarios:
 
-- `invaders_play`, `invaders_killer`, `invaders_breach`.
+- `invaders_play`, `invaders_killer`, `invaders_breach`, `invaders_pause`.
 - `taint_2`, `taint_arbitration`, `taint_protocol`, `taint_4_lossy`, `taint_20`.
 - `taint_practice_timeout`, `taint_practice_win`, `taint_restart`.
+- `taint_end_screen`, `taint_p_flood`.
 
 Invaders tests replace only SNAPSHOT in an in-memory source copy with
 [`test_snapshot.lua`](tools/fixtures/test_snapshot.lua); they leave the files
