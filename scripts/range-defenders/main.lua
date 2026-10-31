@@ -724,7 +724,7 @@ local function draw_over()
   g.text("Flagged:  " .. flagged, 22, 88, g.WHITE)
   if killer and killer.s then g.text("Risk:     " .. killer.s .. "/10", 22, 100, g.WHITE) end
   if breached > 0 then
-    g.text(breached .. " threats got through", 22, 112, g.WHITE)
+    g.text(breached .. (breached == 1 and " threat got through" or " threats got through"), 22, 112, g.WHITE)
   else
     g.text("Status:   Defenses down", 22, 112, g.WHITE)
   end

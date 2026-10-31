@@ -695,10 +695,21 @@ local function draw_end()
   centre(LA .. " menu   DOWN QR", 222, g.MUTED)
 end
 
+-- The radio address can read as all zeros if the app starts before the
+-- network stack is up, so keep asking until a real one arrives.
+local ZERO_MAC = "00:00:00:00:00:00"
+local function refresh_own_mac()
+  if own_mac ~= "" then return end
+  local ok, mac = pcall(badge.wifi.mac)
+  if ok and type(mac) == "string" then
+    mac = mac:lower()
+    if mac_ok(mac) and mac ~= ZERO_MAC then own_mac = mac end
+  end
+end
+
 function on_start()
   math.randomseed(string.unpack("<i4", badge.system.random_bytes(4)))
-  local ok, mac = pcall(badge.wifi.mac)
-  if ok and type(mac) == "string" and mac_ok(mac:lower()) then own_mac = mac:lower() end
+  refresh_own_mac()
   local stored = tonumber(kv.get("best", "0"))
   best = stored and math.tointeger(stored) and clamp(math.tointeger(stored), 0, 99999) or 0
   led.take()
@@ -708,6 +719,7 @@ end
 function on_update(dt)
   dt = clamp(dt, 0, 0.05)
   t = t + dt
+  refresh_own_mac()
   if practice then
     update_practice(dt)
   else
