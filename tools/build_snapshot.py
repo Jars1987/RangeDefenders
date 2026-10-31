@@ -77,6 +77,7 @@ SOURCE = "Range Risk API"
 API = "https://api.range.org/v1/risk/address"
 
 import argparse
+import datetime
 import json
 import os
 import random
@@ -184,11 +185,14 @@ def classify(addr, body):
     if body.get("address") not in (None, addr):
         return None, "response is for a different address"
     score = body.get("riskScore")
-    if not isinstance(score, int) or score < MIN_SCORE:
-        return None, f"score {score} below {MIN_SCORE}"
+    if type(score) is not int or not MIN_SCORE <= score <= 10:
+        return None, f"score {score} outside {MIN_SCORE}..10"
     recs = own_attributions(addr, body)
     if not recs:
         return None, "no own attribution (neighbour exposure only)"
+    if any(_tok(r.get("category")) in {"exchange", "centralized-exchange", "cex", "victim", "victim-exchange"}
+           for r in recs):
+        return None, "victim/exchange attribution"
     cats = {_tok(r.get("category")) for r in recs} - {""}
     risks = {_tok(c) for r in recs for c in (r.get("risk_categories") or [])} - {""}
     labels = " ".join(_tok(r.get("name_tag")) for r in recs)
@@ -237,19 +241,49 @@ def write(path, text):
     os.replace(tmp, path)
 
 
+def replace_snapshot(text, lua):
+    """Require one marker pair; never append a second local declaration."""
+    begin, end = "-- BEGIN GENERATED SNAPSHOT", "-- END GENERATED SNAPSHOT"
+    if text.count(begin) != 1 or text.count(end) != 1:
+        raise ValueError("expected exactly one SNAPSHOT marker pair")
+    pattern = re.compile(re.escape(begin) + r"\n.*?" + re.escape(end), re.S)
+    result, count = pattern.subn(lambda _: begin + "\n" + lua.rstrip() + "\n" + end, text)
+    if count != 1:
+        raise ValueError("SNAPSHOT markers are reversed or malformed")
+    return result
+
+
+def scrub(value):
+    if isinstance(value, dict):
+        return {k: scrub(v) for k, v in value.items() if k not in {"name_tag", "entity", "reasoning"}}
+    if isinstance(value, list):
+        return [scrub(v) for v in value]
+    return value
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--seeds", required=True, help="one Solana address per line, # comments allowed")
+    ap.add_argument("--seeds", default=os.path.join(os.path.dirname(__file__), "seeds.txt"), help="one Solana address per line, # comments allowed")
     ap.add_argument("--dry-run", metavar="DIR", help="replay saved <address>.json responses; no key needed")
-    ap.add_argument("--save-responses", metavar="DIR", help="live mode: save each raw response as DIR/<address>.json")
-    ap.add_argument("--out-lua", required=True)
-    ap.add_argument("--out-json", required=True)
+    ap.add_argument("--save-responses", metavar="DIR", help="live mode: save each scrubbed response as DIR/<address>.json")
+    ap.add_argument("--out-lua")
+    ap.add_argument("--out-json")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--write", metavar="MAIN_LUA", help="replace the generated SNAPSHOT block")
+    mode.add_argument("--check", metavar="MAIN_LUA", help="read-only comparison, exit 1 if stale")
+    ap.add_argument("--allow-missing", action="append", default=[], choices=TYPE_ORDER)
     ap.add_argument("--date", required=True, help="YYYY-MM-DD, written as `generated`")
     ap.add_argument("--sleep", type=float, default=0.5, help="seconds between live calls (default 0.5)")
     a = ap.parse_args()
 
-    if not DATE.match(a.date):
-        sys.exit("error: --date must be YYYY-MM-DD")
+    try:
+        if not DATE.fullmatch(a.date):
+            raise ValueError()
+        datetime.date.fromisoformat(a.date)
+    except ValueError:
+        ap.error("--date must be a valid YYYY-MM-DD")
+    if a.check and (a.out_lua or a.out_json or a.save_responses):
+        ap.error("--check is read-only; output flags are not allowed")
     seeds = read_seeds(a.seeds)
     key = None
     if not a.dry_run:
@@ -260,7 +294,7 @@ def main():
         if a.save_responses:
             os.makedirs(a.save_responses, exist_ok=True)
 
-    entries, excluded = [], []
+    entries, excluded, failures = [], [], []
     for i, addr in enumerate(seeds):
         try:
             if a.dry_run:
@@ -270,9 +304,9 @@ def main():
                     time.sleep(a.sleep)
                 body = fetch(addr, key)
                 if a.save_responses:
-                    write(os.path.join(a.save_responses, addr + ".json"), json.dumps(body, indent=1) + "\n")
-        except RuntimeError as e:
-            excluded.append((addr, str(e)))
+                    write(os.path.join(a.save_responses, addr + ".json"), json.dumps(scrub(body), indent=1) + "\n")
+        except (RuntimeError, OSError, ValueError) as e:
+            failures.append((addr, str(e)))
             continue
         t, reason = classify(addr, body)
         if t:
@@ -281,8 +315,6 @@ def main():
             excluded.append((addr, reason))
 
     entries, lua, js = build(entries, a.date)
-    write(a.out_lua, lua)
-    write(a.out_json, js)
 
     counts = {t: sum(1 for e in entries if e["t"] == t) for t in TYPE_ORDER}
     print(f"kept {len(entries)} of {len(seeds)}: " + ", ".join(f"{t}={counts[t]}" for t in TYPE_ORDER), file=sys.stderr)
@@ -291,6 +323,30 @@ def main():
     for t in TYPE_ORDER:
         if counts[t] < MIN_PER_TYPE:
             print(f"warning: {t} has {counts[t]} entries (target {MIN_PER_TYPE})", file=sys.stderr)
+    for addr, reason in failures:
+        print(f"error: {addr}: {reason}", file=sys.stderr)
+    missing = [t for t in TYPE_ORDER if not counts[t] and t not in a.allow_missing]
+    if failures or missing:
+        sys.exit("error: response failures or empty types: " + ", ".join(missing))
+    path = a.write or a.check
+    if path:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                original = fh.read()
+            updated = replace_snapshot(original, lua)
+        except (OSError, ValueError) as e:
+            sys.exit(f"error: {e}")
+        if a.check and original != updated:
+            sys.exit(f"stale SNAPSHOT: {path}")
+        if a.write and original != updated:
+            write(path, updated)
+        print(f"SNAPSHOT {'checked' if a.check else 'written'}: {path}")
+    if a.out_lua:
+        write(a.out_lua, lua)
+    if a.out_json:
+        write(a.out_json, js)
+    if not path and not a.out_lua and not a.out_json:
+        print(lua, end="")
 
 
 if __name__ == "__main__":
