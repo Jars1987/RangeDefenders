@@ -640,7 +640,8 @@ local function draw_radar()
     fill(48, 64, 172 * clamp(c.exposure / EXPOSE_MAX, 0, 1), 9, state_colour(c.st))
     text(I(100 * c.exposure / EXPOSE_MAX) .. "%", 230, 65, g.MUTED)
   elseif c.st == "T" then
-    text("LAUNDERING: " .. count(c.children) .. " wallets reached", 10, 65, g.RED)
+    local n = count(c.children)
+    text("LAUNDERING: " .. n .. (n == 1 and " wallet reached" or " wallets reached"), 10, 65, g.RED)
   else text("Immune for the rest of this round", 10, 65, g.BLUE) end
   rule(81)
   text("WALLET", 20, 86, g.MUTED)
