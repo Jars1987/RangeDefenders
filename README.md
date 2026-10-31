@@ -155,4 +155,4 @@ separate from these headless checks.
 
 ## Credits
 
-Range Invaders by Jose Santos. Taint and data by Range.
+Range Invaders by Jose Santos. Taint by Range.

@@ -3,7 +3,7 @@ local g, input, kv = badge.gfx, badge.input, badge.storage.kv
 local THREATS = {
   {name="WORMHOLE HACKER", type="EXPLOIT", hits=2},
   {name="RUG PULL DEV", type="SCAM", hits=1},
-  {name="LAZARUS", type="MIXER", hits=2},
+  {name="DPRK WALLET 1", type="MIXER", hits=2},
   {name="WALLET DRAINER", type="DRAINER", hits=1},
 }
 -- BEGIN GENERATED QR

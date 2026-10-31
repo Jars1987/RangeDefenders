@@ -104,7 +104,7 @@ local KINDS = {
     "PUMP AND DUMP", "SCAM COIN", "RUG PULL DEV", "PRESALE SCAMMER", "FAKE AIRDROP",
   } },
   { name = "MIXER", pts = 20, color = g.YELLOW, names = {
-    "LAZARUS", "DPRK WALLET 1", "DPRK WALLET 2", "LAUNDERING HOP",
+    "DPRK WALLET 1", "DPRK WALLET 2", "LAUNDERING HOP",
   } },
   { name = "DRAINER", pts = 10, color = g.SOLANA_MAGENTA, names = {
     "RAINBOW DRAINER", "WALLET DRAINER", "FAKE MINT SITE",

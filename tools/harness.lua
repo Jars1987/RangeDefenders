@@ -302,7 +302,7 @@ function scenarios.invaders_names()
       'SOLEND HACKER','CREMA HACKER','NIRVANA HACKER','CYPHER HACKER',
       'LOOPSCALE HACKER','DEXX HACKER','DEFITUNA HACKER'},
     {'PUMP AND DUMP','SCAM COIN','RUG PULL DEV','PRESALE SCAMMER','FAKE AIRDROP'},
-    {'LAZARUS','DPRK WALLET 1','DPRK WALLET 2','LAUNDERING HOP'},
+    {'DPRK WALLET 1','DPRK WALLET 2','LAUNDERING HOP'},
     {'RAINBOW DRAINER','WALLET DRAINER','FAKE MINT SITE'},
   }
   local types={'EXPLOIT','SCAM','MIXER','DRAINER'}
@@ -348,6 +348,7 @@ function scenarios.invaders_names()
     for token in text:gmatch('[1-9A-HJ-NP-Za-km-z]+') do
       check(#token<32,'wallet-like token rendered: '..token)
     end
+    check(not text:find('%w%w%w%w%.%.%w%w%w%w'),'short address rendered: '..text)
   end
   -- Exercise the real popup helper at both edges in an isolated device.
   -- Only transient effects are added; gameplay scenarios use normal controls.
