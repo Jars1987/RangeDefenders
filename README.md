@@ -1,5 +1,7 @@
 # Solana Defenders and Taint
 
+> The Solana Breakpoint 2026 (BP26) badge version of Solana Defenders is in `apps/defenders/`; see [BP26.md](BP26.md).
+
 Two Lua games for the Solana Breakpoint "Scale or Die" badge: ESP32-S3, a
 320x240 display, D-pad, SELECT and CANCEL, two LEDs and ESP-NOW radio.
 

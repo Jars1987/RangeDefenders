@@ -18,8 +18,8 @@ DEF CON reference games live in scripts/. BP26 packages use Solana OS 0.5.5 widg
 ## Long-run / commit config
 
 - **Smoke per batch:** `cd server && bun test`
-- **Final pass:** `cd server && bun run typecheck && bun test`; `/opt/homebrew/opt/lua@5.4/bin/lua tools/bp26/harness.lua all` from the root.
+- **Final pass:** `/opt/homebrew/opt/lua@5.4/bin/lua tests/defenders/run.lua all` and `node tools/bp26/defenders-code.mjs --test` from the root; for the parked Lazarus build also `cd server && bun run typecheck && bun test` and `/opt/homebrew/opt/lua@5.4/bin/lua tools/bp26/harness.lua all`.
 - **Docs:** `BP26.md`, `server/README.md`, `docs/bp26/` references.
 - **Trunk flow:** direct. Do not create a PR without an explicit request.
-- **Out-of-scope paths:** scripts/** media/** apps/defenders/** tests/defenders/**
+- **Out-of-scope paths:** scripts/** media/**
 - **Commit message shape:** imperative subject under 72 characters; human authorship only.
