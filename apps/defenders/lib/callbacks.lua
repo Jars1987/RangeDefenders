@@ -1,9 +1,9 @@
 local s=...
 local function scene()
   if s[21] or s[57]=="title" then s[39]=nil end
-  if s[57]=="play" and s[60][2] then s[20]=nil; return end
+  if s[57]=="play" and s[60][60] then s[20]=nil; return end
   if s[57]=="pause" or (s[57]=="play" and s[39]) then
-    for i=2,59 do local p=s[60][i]; if p then p:remove(); s[60][i]=nil end end
+    for i=14,83 do local p=s[60][i]; if p then p:remove(); s[60][i]=nil end end
     if s[57]=="pause" then assert(fs.load("lib/pause.lua"))(s) else s[39](s,"draw") end
     s[20]=nil
   else
@@ -46,7 +46,7 @@ function on_key(key,rep)
       s[20]=true
     end
     handled=true
-  else handled=assert(fs.load(s[57]=="over" and "lib/board.lua" or "lib/menu.lua"))(s,"key",key,rep) end
+  else handled=assert(fs.load(s[57]=="over" and "lib/board.lua" or "lib/menu-key.lua"))(s,"key",key,rep) end
   if s[20] then scene() end
   return handled
 end

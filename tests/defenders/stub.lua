@@ -10,6 +10,7 @@ function M.new(config)
   config=config or {}
   local h={objects={},queue={},calls={},now=0,max_instructions=0,max_live=0,live=0,
     peak_heap=0,peak_total=0,max_live_play=0,loads={},proxies={},io_cost=0,module_cache={},store=config.store or {},awards={},writes={},exited=false,
+    callback_id=0,callback_chunks={},compile_events={},
     time=config.time or 20000*86400,badge_id=config.badge_id}
   if config.time==false then h.time=nil end
   if config.badge_id==nil then h.badge_id="7K2Q9M" elseif config.badge_id==false then h.badge_id=nil end
@@ -20,7 +21,7 @@ function M.new(config)
   function methods:text(s)
     assert(self.kind=='label' or self.kind=='qr','unsupported text method')
     assert(type(s)=='string' and #s<=(self.kind=='label' and 200 or 256),'text limit')
-    assert(not s:find('[^ -~]'),'non-ASCII UI: '..s)
+    assert(not s:find('[^\n -~]'),'non-ASCII UI: '..s)
     self.text_value=s
   end
   function methods:pos(x,y) self.x=x; self.y=y end
@@ -39,7 +40,8 @@ function M.new(config)
       for _,o in ipairs(h.objects) do assert(o.kind~='qr' or o.removed,'two QR objects') end
     end
     local o=setmetatable({kind=kind,x=x,y=y,w=w,h=hh,visible=true,
-      color_value=opts and opts.color,size_value=opts and opts.size or 12}, {__index=methods})
+      color_value=opts and opts.color,size_value=opts and opts.size or 12,
+      mono=opts and opts.mono,align=opts and opts.align,created_callback=h.callback_id}, {__index=methods})
     views[o]=true; h.objects[#h.objects+1]=o
     if text then o:text(text) end
     return o
@@ -179,6 +181,15 @@ function M.new(config)
     local chunk=assert(load(source,name,'t',env))
     collectgarbage('collect')
     self.proxies[name]=math.max(self.proxies[name] or 0,math.ceil((collectgarbage('count')-baseline)*1024))
+    -- Remember code compiled earlier in this callback, even if it is no longer
+    -- reachable. Together with phase widget references this exposes overlap
+    -- hidden by the retained-heap proxy. It is not a native allocator model.
+    local event={path=path,callback=self.callback_id,previous=clone(self.callback_chunks),phase_widgets=0,live=self.live}
+    if self.state then for i=14,83 do
+      if self.state[60][i] then event.phase_widgets=event.phase_widgets+1 end
+    end end
+    self.compile_events[#self.compile_events+1]=event
+    self.callback_chunks[path]=self.proxies[name]
     self.loading=chunk; self:sample(); self.loading=nil
     self.io_cost=self.io_cost+500+math.ceil(#source/4)
     debug.sethook(hook,mask,count)
@@ -196,6 +207,7 @@ function M.new(config)
   function h:invoke(fn,...)
     local count=0
     self.io_cost=0
+    self.callback_id=self.callback_id+1; self.callback_chunks={}
     debug.sethook(function()
       count=count+1000
       assert(count+self.io_cost<200000,'callback exceeds 200,000 VM instructions')

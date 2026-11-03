@@ -15,6 +15,7 @@ end
 local function report(name,points)
   if points then
     w[46]:text(name.." +"..points); s[41]=16
+    w[46]:color(s[63][5-points//10] or "aqua")
     s[49]=min(2000000000,s[49]+points); led.fill(20,241,149); s[23]=2
   else
     s[28]=name; s[57]="over"; s[21]=true; s[20]=true
@@ -23,10 +24,11 @@ end
 local function hit(x,y,a,b,c,d)
   return x<c+a and c<x+3 and y<d+b and d<y+7
 end
-if event=="start" then wave(); s[20]=true
+-- Return before building widgets so compiler garbage can die with this callback.
+if event=="start" then wave(); s[20]=true; return
 elseif event=="key" then
   if key=="left" or key=="right" then
-    s[42]=max(2,min(296,s[42]+(key=="left" and -8 or 8))); w[37]:pos(s[42],188)
+    s[42]=max(2,min(296,s[42]+(key=="left" and -8 or 8))); if w[37] then w[37]:pos(s[42],188) end
   elseif key=="back" and not rep then s[57]="pause"; s[20]=true end
   return true
 elseif event=="tick" then
@@ -62,7 +64,8 @@ elseif event=="tick" then
       else
         for j=24,1,-1 do
           local bit=1<<(j-1)
-          if s[32] & bit~=0 and hit(s[12][i],s[13][i],22,14,s[24]+(j-1)%6*33,s[25]+(j-1)//6*25) then
+          -- Match the four-column, two-line sprite and integer widget origin.
+          if s[32] & bit~=0 and hit(s[12][i],s[13][i],22,24,floor(s[24])+(j-1)%6*33,floor(s[25])+(j-1)//6*25) then
             s[32]=s[32] & ~bit; s[1]=s[1]-1; s[13][i]=0
             report(name(j),(4-(j-1)//6)*10); break
           end
@@ -92,28 +95,38 @@ elseif event=="tick" then
       end
     end
   end
-  if s[1]==0 then s[62]=s[62]+1; s[31]=min(5,s[31]+1); wave(); w[46]:text("WAVE CLEARED +1 LIFE"); s[41]=30 end
+  if s[1]==0 then s[62]=s[62]+1; s[31]=min(5,s[31]+1); wave(); w[46]:text("WAVE CLEARED +1 LIFE"); w[46]:color("green"); s[41]=30 end
 end
-if not w[2] then
-  do
-  local colors={"pink","orange","yellow","purple"}
-  local glyphs={"<W>","{V}","(@)","[v]"}
-  for i=1,24 do local r=(i-1)//6+1; w[i+1]=ui.label(0,0,glyphs[r],{size=12,mono=true,color=colors[r]}) end
+if not w[60] then
+  s[30]=nil; s[64]=nil; s[65]=nil; ui.hint("")
+  -- One label per alien: the badge font is proportional, so blanking sprites
+  -- inside a row label would slide the survivors off their hit boxes.
+  for i=1,24 do local r=(i-1)//6+1; w[59+i]=ui.label(0,0,s[61][r*2-1].."\n"..s[61][r*2],{size=12,color=s[63][r]}) end
+  for i=1,8 do w[26+i]=ui.rect(0,0,3,7,{color=i<=5 and "green" or "pink"}) end
+  for i=1,3 do
+    local x=i*80-14
+    w[15+i*3]=ui.rect(x,174,28,3,{color="green"})
+    w[16+i*3]=ui.rect(x,177,7,4,{color="green"})
+    w[17+i*3]=ui.rect(x+21,177,7,4,{color="green"})
   end
-  for i=1,8 do w[25+i]=ui.rect(0,0,3,7,{color=i<=5 and "green" or "pink"}) end
-  for i=1,3 do w[33+i]=ui.rect(i*80-14,174,28,7,{color="aqua",radius=2}) end
-  w[37]=ui.label(s[42],188,"/^\\",{size=12,color="green",mono=true})
-  w[38]=ui.label(100,19,"<LAZARUS>",{size=12,color="aqua",mono=true})
-  w[43]=ui.label(6,5,"",{size=12,w=308})
-  w[46]=ui.label(2,153,"",{size=12,w=316,align="center",color="green"})
+  w[37]=ui.label(s[42],188,"/^\\",{size=12,color="purple",mono=true})
+  w[38]=ui.label(100,19,"<o_o_oo_o_o>",{size=12,color="aqua",mono=true})
+  w[43]=ui.label(6,5,"",{size=12,w=114})
+  w[44]=ui.label(120,5,"",{size=12,w=80,align="center",color="aqua"})
+  w[45]=ui.label(224,5,"",{size=12,w=90,align="right",color="green"})
+  w[46]=ui.label(2,22,"",{size=12,w=76,color="green"})
+  w[47]=ui.label(0,202,"screened by range.org",{size=12,w=320,align="center",color="dim"})
 end
+if s[30]~=s[32] then for i=1,24 do w[59+i]:show(s[32] & (1<<(i-1))~=0) end end
+s[30]=s[32]
 for i=1,24 do
-  local active=s[32] & (1<<(i-1))~=0
-  w[i+1]:show(active)
-  if active then w[i+1]:pos(floor(s[24]+(i-1)%6*33),floor(s[25]+(i-1)//6*25)) end
+  if s[32] & (1<<(i-1))~=0 then w[59+i]:pos(floor(s[24])+(i-1)%6*33,floor(s[25])+(i-1)//6*25) end
 end
-for i=1,8 do w[i+25]:show(s[13][i]>0); if s[13][i]>0 then w[i+25]:pos(floor(s[12][i]),floor(s[13][i])) end end
-for i=1,3 do w[i+33]:show(s[27][i]>0); w[i+33]:color(s[27][i]==1 and "orange" or "aqua") end
-w[43]:text(string.format("SCORE %d   WAVE %d   %s",s[49],s[62],"LIFE "..s[31]))
+for i=1,8 do w[i+26]:show(s[13][i]>0); if s[13][i]>0 then w[i+26]:pos(floor(s[12][i]),floor(s[13][i])) end end
+for i=1,3 do
+  w[15+i*3]:show(s[27][i]>=2); w[16+i*3]:show(s[27][i]>=1); w[17+i*3]:show(s[27][i]>=3)
+end
+-- Only rebuild HUD strings when they change; per-tick strings filled the heap.
+if s[64]~=s[49] then s[64]=s[49]; w[43]:text(string.format("SCORE %05d",s[49])) end
+if s[65]~=s[62]*8+s[31] then s[65]=s[62]*8+s[31]; w[44]:text("WAVE "..s[62]); w[45]:text(string.rep("/^\\",s[31])) end
 w[38]:pos(floor(s[10]),19); w[38]:show(s[8]>0); w[46]:show(s[41]>0)
-ui.hint("LEFT/RIGHT move   BACK pause")

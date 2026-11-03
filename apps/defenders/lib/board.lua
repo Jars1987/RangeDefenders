@@ -17,15 +17,18 @@ end
 local function line(i,y,text,color)
   s[60][46+i]=ui.label(4,y,text,{size=12,w=110,color=color or "text"})
 end
-line(1,6,"RANGE ALERT","pink"); line(2,28,s[28],"orange")
-line(3,66,"SCORE","green"); line(4,82,tostring(s[49]),"green")
-line(5,108,"TODAY "..(s[3] or "--"),"aqua")
-line(6,126,"BEST "..s[4],"aqua"); line(7,148,"WAVE "..s[62])
-line(8,174,s[16] and "Scan to repost Range" or "Scan to post your score","dim")
+-- The threat name gets two lines (18..42): long names like RAINBOW DRAINER wrap.
+line(1,4,"RANGE ALERT","pink"); line(2,18,s[28],"orange")
+line(3,46,"SCORE","green"); line(4,60,tostring(s[49]),"green")
+line(5,82,"TODAY "..(s[3] or "--"),"aqua")
+line(6,96,"BEST "..s[4],"aqua"); line(7,110,"WAVE "..s[62])
+line(8,128,"CODE","dim")
+s[60][55]=ui.label(4,142,s[53]:sub(-6),{size=20,mono=true,w=110,color="green"})
+line(10,164,"SELECT retry\nBACK title"..(s[54]~="" and "\nRIGHT repost" or ""),"dim")
 local url=s[16] and "https://x.com/intent/retweet?tweet_id="..s[54] or s[53]
 if ui.qr then s[60][59]=ui.qr(118,0,202,url)
 else
   s[60][59]=ui.label(122,66,url:sub(1,60).."...",{size=12,w=194})
   ui.toast("Update Solana OS to scan")
 end
-ui.hint("SELECT retry  BACK title"..(s[54]~="" and "  RIGHT repost" or ""))
+ui.hint(s[16] and "Scan to repost Range" or "Photo this screen, scan to post")
