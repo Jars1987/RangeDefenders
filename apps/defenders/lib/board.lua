@@ -3,7 +3,7 @@ if event=="finish" then
   s[31]=0; s[34]=s[49]>s[4]
   if s[34] then s[4]=s[49]; storage.set("best",s[4]) end
   if s[2] then s[3]=math.max(s[3],s[49]); storage.set("today",s[3]) end
-  local code=assert(fs.load("lib/code.lua"))(s[49],badge.id(),s[2],s[62])
+  local code=assert(fs.load("lib/code.lua"))(s[49],s[2])
   s[53]="https://x.com/intent/post?text=I+scored+"..s[49]..
     "+on+Solana+Defenders+at+%23Breakpoint.+Beat+it%3F+%40range_org+"..code
   s[23]=8; led.fill(220,30,80); s[20]=true
