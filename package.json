@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "scripts": {
+    "demo": "bun run --cwd server demo"
+  }
+}

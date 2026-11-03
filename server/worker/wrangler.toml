@@ -1,0 +1,15 @@
+name = "range-bp26"
+main = "index.ts"
+compatibility_date = "2025-10-11"
+
+[vars]
+PUBLIC_ORIGIN = "https://badge.example.com"
+WELCOME_AMOUNT = "0"
+
+[[durable_objects.bindings]]
+name = "GAME"
+class_name = "GameRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GameRoom"]

@@ -1,0 +1,12 @@
+{
+  "id": "range-defenders",
+  "name": "Solana Defenders",
+  "version": "1.0.0",
+  "author": "Range",
+  "summary": "Screen out Solana threats. Defend the network.",
+  "category": "games",
+  "icon": "play",
+  "accent": "14F195",
+  "permissions": ["led", "lamps", "profile", "http"],
+  "hosts": ["rng.example"]
+}

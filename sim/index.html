@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lazarus In The Room</title>
+    <link rel="stylesheet" href="/sim/style.css" />
+    <script src="/sim/wasmoon.js"></script>
+    <script src="/sim/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <a
+        class="wordmark"
+        href="https://www.range.org"
+        target="_blank"
+        rel="noopener"
+        >range<span>.</span></a
+      ><a href="/live?ns=demo" target="_blank">Live board</a>
+    </header>
+    <main>
+      <section class="intro">
+        <h1>Lazarus is<br />in the room<span>.</span></h1>
+        <p>Trace the taint. Catch the source.</p>
+        <div class="pills">
+          <span class="status" id="connection">Loading Lua</span
+          ><span>Demo / no rewards</span>
+        </div>
+      </section>
+      <section class="game">
+        <div class="device-wrap">
+          <div class="device">
+            <div class="badge-top">
+              <b>BREAKPOINT '26</b><span>SOLANA</span>
+            </div>
+            <div class="leds" id="leds">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <div class="screen">
+              <div id="badge"></div>
+              <div id="hint"></div>
+            </div>
+            <div class="controls">
+              <button data-key="left" aria-label="Left">&lt;</button>
+              <div>
+                <button data-key="up" aria-label="Up">^</button
+                ><button class="select" data-key="select">SELECT</button
+                ><button data-key="down" aria-label="Down">v</button>
+              </div>
+              <button data-key="right" aria-label="Right">&gt;</button
+              ><button class="back" data-key="back">BACK</button>
+            </div>
+          </div>
+          <p class="device-caption" id="runtime">
+            Real badge Lua / Solana OS API adapter
+          </p>
+        </div>
+        <div class="room">
+          <div class="room-heading">
+            <h2>The room</h2>
+            <button class="reset" id="reset">New room</button>
+          </div>
+          <p>Drag badges closer to build HEAT.</p>
+          <div class="arena" id="arena" aria-label="Badge proximity map"></div>
+          <div id="players" class="players"></div>
+          <p class="help">
+            SELECT to join. Screen a nearby badge to follow its upstream clue.
+          </p>
+          <details>
+            <summary>Simulation controls</summary>
+            <label><input id="network" type="checkbox" /> Network loss</label
+            ><button id="gather">Gather badges</button
+            ><button id="separate">Spread out</button>
+          </details>
+        </div>
+      </section>
+    </main>
+    <div class="toast" id="toast" role="status"></div>
+  </body>
+</html>

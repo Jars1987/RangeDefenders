@@ -1,0 +1,468 @@
+:root {
+  color-scheme: dark;
+  --ink: #e9eee7;
+  --mint: #a5f7c6;
+  --muted: #a3b2ad;
+  --font:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text",
+    "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #0b1318;
+  color: var(--ink);
+  font: 15px var(--font);
+}
+button,
+a,
+input {
+  touch-action: manipulation;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #a5f7c6;
+  outline-offset: 4px;
+}
+header {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5vw;
+  border-bottom: 1px solid #27333a;
+}
+header > a:last-child {
+  color: var(--muted);
+  font-size: 14px;
+}
+.wordmark {
+  font-size: 35px;
+  font-weight: 800;
+  letter-spacing: -2px;
+}
+.wordmark span,
+h1 span {
+  color: var(--mint);
+}
+main {
+  max-width: 1350px;
+  margin: 0 auto;
+  padding: 52px 5vw 65px;
+}
+.intro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 70px;
+  align-items: end;
+}
+h1 {
+  font-size: clamp(54px, 6.7vw, 88px);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+  margin: 0;
+  font-weight: 750;
+}
+.intro p {
+  grid-column: 1;
+  font-size: 17px;
+  color: var(--muted);
+  margin: 22px 0 0;
+}
+.pills {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  gap: 8px;
+  align-self: end;
+}
+.pills span {
+  border-radius: 30px;
+  background: #1a282e;
+  padding: 9px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pills .status {
+  color: var(--mint);
+}
+.game {
+  display: grid;
+  grid-template-columns: minmax(350px, 1fr) minmax(330px, 1fr);
+  gap: 70px;
+  margin-top: 48px;
+  align-items: start;
+}
+.device-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.device {
+  width: 370px;
+  background: #d8e5df;
+  border-radius: 26px 26px 42px 42px;
+  padding: 21px 21px 24px;
+  color: #183127;
+  box-shadow:
+    0 24px 60px -20px #0009,
+    inset 0 1px #fff;
+}
+.badge-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 0 3px;
+}
+.badge-top span {
+  font-size: 10px;
+  font-weight: 800;
+}
+.leds {
+  display: flex;
+  gap: 19px;
+  padding: 18px 10px 15px;
+}
+.leds i {
+  width: 13px;
+  height: 6px;
+  border-radius: 6px;
+  background: #687c72;
+}
+.screen {
+  background: #0b1318;
+  border: 4px solid #223b31;
+  border-radius: 7px;
+  width: 328px;
+  height: 242px;
+  position: relative;
+  overflow: hidden;
+  color: #eef2ee;
+}
+#badge {
+  position: relative;
+  width: 320px;
+  height: 218px;
+  font: 14px var(--font);
+  transform-origin: 0 0;
+}
+.widget {
+  position: absolute;
+  white-space: pre-wrap;
+  line-height: 20px;
+  overflow: hidden;
+}
+.qr {
+  background: #fff;
+  color: #10281c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  word-break: break-all;
+  padding: 16px;
+  border-radius: 4px;
+}
+.qr a {
+  color: #183127;
+  font-size: 13px;
+  text-decoration: underline;
+}
+.qr small {
+  font-size: 12px;
+}
+#hint {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 320px;
+  height: 16px;
+  font: 11px var(--font);
+  background: #172b26;
+  color: #a5f7c6;
+  text-align: center;
+  line-height: 16px;
+  overflow: hidden;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  position: relative;
+  min-height: 122px;
+  padding-top: 12px;
+}
+.controls div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.controls button {
+  background: #bdcfc5;
+  color: #193e2a;
+  border-radius: 50%;
+  height: 31px;
+  min-width: 32px;
+  font-size: 19px;
+  box-shadow: 0 2px 0 #8ea99a;
+}
+.controls .select {
+  border-radius: 20px;
+  height: 33px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 0 20px;
+  background: #244f3a;
+  color: #e8f6e7;
+}
+.controls .back {
+  position: absolute;
+  right: 3px;
+  bottom: 6px;
+  border-radius: 20px;
+  font-size: 10px;
+  height: 29px;
+  padding: 0 12px;
+}
+.device-caption {
+  color: #8da09a;
+  text-align: center;
+  font-size: 11px;
+  margin-top: 17px;
+}
+.room-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.room h2 {
+  font-size: 25px;
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+.room-heading button {
+  background: #21362d;
+  color: var(--mint);
+  border-radius: 24px;
+  padding: 10px 16px;
+  font-size: 12px;
+}
+.room > p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 12px 0 20px;
+}
+.arena {
+  height: 240px;
+  background:
+    radial-gradient(circle at 50% 50%, #1c342b 0, transparent 65%), #101d22;
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: inset 0 0 30px #0002;
+  touch-action: none;
+}
+.arena:before,
+.arena:after {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border: 1px solid #274338;
+  border-radius: 50%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.arena:after {
+  width: 340px;
+  height: 340px;
+}
+.dot {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
+  white-space: nowrap;
+  color: #9fbbb0;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.dot i {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #658a79;
+  border: 4px solid #b5d2c2;
+  box-shadow: 0 0 0 5px #44675033;
+}
+.dot.you {
+  color: #cbffe4;
+}
+.dot.you i {
+  background: #a5f7c6;
+  border-color: #e7ffed;
+  box-shadow: 0 0 0 7px #a5f7c622;
+}
+.dot.tainted i {
+  background: #ed5151;
+  border-color: #ffb7a5;
+  box-shadow: 0 0 0 5px #ed515122;
+}
+.dot.quarantined i {
+  background: #8c9df4;
+  border-color: #cbd4ff;
+}
+.players {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 24px;
+  margin-top: 16px;
+}
+.player {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #23342e;
+  padding: 9px 0;
+  font-size: 11px;
+  color: #c5d1cb;
+}
+.player span:last-child {
+  color: #839d90;
+  font-variant-numeric: tabular-nums;
+}
+.room .help {
+  margin: 20px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+details {
+  color: #81948a;
+  font-size: 11px;
+}
+summary {
+  cursor: pointer;
+}
+details label {
+  display: block;
+  margin: 14px 0;
+}
+details button {
+  border-radius: 20px;
+  background: #23362d;
+  font-size: 11px;
+  padding: 8px 13px;
+  margin-right: 8px;
+}
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #d8ffe5;
+  color: #123a22;
+  padding: 14px 22px;
+  border-radius: 30px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+.toast.visible {
+  opacity: 1;
+}
+@media (max-width: 850px) {
+  header {
+    height: 76px;
+  }
+  main {
+    padding-top: 34px;
+  }
+  .intro {
+    display: block;
+  }
+  h1 {
+    font-size: 64px;
+  }
+  .intro p {
+    margin: 18px 0;
+  }
+  .pills {
+    margin-top: 22px;
+  }
+  .game {
+    grid-template-columns: 1fr;
+    gap: 34px;
+    margin-top: 32px;
+  }
+  .room {
+    max-width: 500px;
+    width: 100%;
+    margin: auto;
+  }
+  .device-wrap {
+    align-items: center;
+  }
+  .arena {
+    height: 260px;
+  }
+}
+@media (max-width: 390px) {
+  main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .device {
+    transform: scale(0.9);
+    transform-origin: top center;
+    margin-bottom: -42px;
+  }
+  h1 {
+    font-size: 56px;
+  }
+  .pills span {
+    padding: 8px 10px;
+  }
+}
+
+.qr {
+  height: 196px;
+  padding: 0;
+  gap: 0;
+}
+.qr a {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.qr img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
