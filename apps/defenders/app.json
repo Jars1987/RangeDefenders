@@ -9,12 +9,6 @@
   "accent": "14F195",
   "permissions": [
     "led",
-    "lamps",
-    "profile",
-    "http"
-  ],
-  "hosts": [
-    "example.trycloudflare.com",
-    "rng.example"
+    "lamps"
   ]
 }

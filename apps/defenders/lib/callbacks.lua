@@ -1,5 +1,4 @@
 local s=...
-local net=assert(fs.load("lib/net.lua"))
 local function scene()
   if s[21] or s[57]=="title" then s[39]=nil end
   if s[57]=="play" and s[60][2] then s[20]=nil; return end
@@ -15,25 +14,30 @@ local function scene()
     end
   end
 end
-s[50]=function(path,body,kind)
-  s[11]=true; s[18]=7000; s[58]=s[58]+1; s[29]=kind
-  local ticket=s[58]
-  http.post(s[51]..path,body,function(ok,res)
-    if not s[15] and ticket==s[58] and s[11] then s[44]={ok,res} end
-  end)
+local function day()
+  local t=sys.time()
+  local d=t and t//86400
+  if d~=s[2] then
+    s[2]=d; s[3]=nil
+    if d then
+      s[3]=storage.get("day")==d and (tonumber(storage.get("today")) or 0) or 0
+      storage.set("day",d); storage.set("today",s[3])
+    end
+    s[20]=true
+  end
 end
+day()
 function on_tick(ms)
   if s[15] then return end
   ms=math.max(0,math.min(1000,ms))
-  s[61]=math.max(0,s[61]-ms)
+  day()
   if s[23]>0 then s[23]=s[23]-1; if s[23]==0 then led.off() end end
-  if s[11] then s[18]=s[18]-ms end
-  if s[44] or s[30] or (s[11] and s[18]<=0) or (not s[11] and s[61]==0) then net(s) end
-  if s[57]=="play" then s[40]=s[40]+ms; s[39](s,"tick") end
+  if s[57]=="play" then s[39](s,"tick") end
   if s[20] then scene() end
 end
 function on_key(key,rep)
   if s[15] then return true end
+  day()
   local handled
   if s[57]=="play" then handled=s[39](s,"key",key,rep)
   elseif s[57]=="pause" then

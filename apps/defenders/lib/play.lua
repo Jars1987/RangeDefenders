@@ -114,6 +114,6 @@ for i=1,24 do
 end
 for i=1,8 do w[i+25]:show(s[13][i]>0); if s[13][i]>0 then w[i+25]:pos(floor(s[12][i]),floor(s[13][i])) end end
 for i=1,3 do w[i+33]:show(s[27][i]>0); w[i+33]:color(s[27][i]==1 and "orange" or "aqua") end
-w[43]:text(string.format("SCORE %d   WAVE %d   %s",s[49],s[62],s[37] and "offline" or "LIFE "..s[31]))
+w[43]:text(string.format("SCORE %d   WAVE %d   %s",s[49],s[62],"LIFE "..s[31]))
 w[38]:pos(floor(s[10]),19); w[38]:show(s[8]>0); w[46]:show(s[41]>0)
 ui.hint("LEFT/RIGHT move   BACK pause")

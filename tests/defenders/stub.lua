@@ -9,7 +9,10 @@ local function clone(t) local out={}; for k,v in pairs(t) do out[k]=v end; retur
 function M.new(config)
   config=config or {}
   local h={objects={},queue={},calls={},now=0,max_instructions=0,max_live=0,live=0,
-    peak_heap=0,peak_total=0,max_live_play=0,loads={},proxies={},io_cost=0,module_cache={},store=config.store or {},awards={},ledger={},scores={},exited=false}
+    peak_heap=0,peak_total=0,max_live_play=0,loads={},proxies={},io_cost=0,module_cache={},store=config.store or {},awards={},writes={},exited=false,
+    time=config.time or 20000*86400,badge_id=config.badge_id}
+  if config.time==false then h.time=nil end
+  if config.badge_id==nil then h.badge_id="7K2Q9M" elseif config.badge_id==false then h.badge_id=nil end
   local env={}
   h.env=env
   local views={}
@@ -32,6 +35,7 @@ function M.new(config)
     h.live=h.live+1; h.max_live=math.max(h.max_live,h.live)
     assert(h.live<=64,'more than 64 UI objects')
     if kind=='qr' then
+      assert(w>=25 and w<=218 and x>=0 and y>=0 and x+w<=320 and y+w<=202,'QR outside available screen')
       for _,o in ipairs(h.objects) do assert(o.kind~='qr' or o.removed,'two QR objects') end
     end
     local o=setmetatable({kind=kind,x=x,y=y,w=w,h=hh,visible=true,
@@ -52,88 +56,24 @@ function M.new(config)
   if not config.noqr then env.ui.qr=function(x,y,n,s) return object('qr',x,y,n,n,s) end end
   env.led={fill=function(r,g,b) h.led={r,g,b} end,off=function() h.led={0,0,0} end}
   env.storage={get=function(k) return h.store[k] end,
-    set=function(k,v) h.store[k]=assert(json.decode(json.encode(v))) end,
+    set=function(k,v) h.store[k]=assert(json.decode(json.encode(v))); h.writes[#h.writes+1]={k,v} end,
     remove=function(k) h.store[k]=nil end}
-  env.sys={millis=function() return h.now end,exit=function() h.exited=true end}
+  env.sys={millis=function() return h.now end,time=function() return h.time end,exit=function() h.exited=true end}
+  env.badge={id=function() return h.badge_id end}
   env.json=json
   local function enqueue(fn,delay) h.queue[#h.queue+1]={at=h.now+(delay or 50),fn=fn} end
   env.timer={after=function(ms,fn) enqueue(fn,ms); return #h.queue end,
     cancel=function(i) if h.queue[i] then h.queue[i].cancelled=true end end}
-  env.profile={me=function(cb)
-    enqueue(function() cb(not config.offline,config.offline and 'offline' or {name='Tester',x='@tester'}) end,config.profile_delay)
-  end}
   env.lamps={award=function(amount,reason,cb)
-    assert(amount>0 and reason=='Welcome to Solana Defenders')
+    assert(amount==25 and reason=='Welcome to Solana Defenders')
     h.awards[#h.awards+1]=amount
     enqueue(function()
       if config.award_denied then cb(false,'denied')
       elseif config.award_timeout then cb(false,'timeout')
+      elseif config.award_result then cb(true,config.award_result)
       else cb(true,{awarded=config.needsx and 0 or config.capzero and 0 or amount,needsX=config.needsx or false}) end
-    end)
+    end,config.award_delay)
   end}
-  local counts={}
-  local function default_server(path,b)
-    if path=='/v1/hello' then
-      assert(b.app=='defenders' and b.v=='1.0.0' and type(b.name)=='string')
-      return {ok=true,welcome={amount=config.welcome or 0,eligible=config.eligible~=false},big_drop_in_s=3600}
-    elseif path=='/v1/welcome/claim' then
-      assert(b.app=='defenders' and type(b.op)=='string' and b.op:match('^[0-9a-f]+$'))
-      local key='welcome:'..b.op
-      h.ledger[key]=h.ledger[key] or {ok=true,amount=config.welcome or 0}
-      return h.ledger[key]
-    elseif path=='/v1/defenders/score' then
-      assert(type(b.score)=='number' and b.score>=0 and b.score%1==0)
-      assert(type(b.wave)=='number' and b.wave>=1 and type(b.boss)=='boolean')
-      assert(type(b.op)=='string' and b.op:match('^[0-9a-f]+$'))
-      if not h.ledger[b.op] then
-        h.scores[#h.scores+1]=b
-        h.ledger[b.op]={ok=true,best=b.score,rank=2,top={
-          {n='ALICE',s=3000},{n='BOB',s=2400},{n='CAROL',s=1800},
-          {n='DAVE',s=1200},{n='ERIN',s=600}}}
-      end
-      return h.ledger[b.op]
-    elseif path=='/v1/share' then
-      assert(b.app=='defenders' and b.kind=='score' and type(b.data.score)=='number')
-      return {ok=true,url=(config.server or 'https://rng.example')..'/r/a'}
-    end
-    error('unexpected endpoint: '..path)
-  end
-  env.http={post=function(url,body,cb)
-    assert(url:match('^https://'),'HTTPS only')
-    assert(type(body)=='table','POST JSON table expected')
-    local encoded=json.encode(body)
-    assert(#encoded<=2048,'HTTP upload budget')
-    assert(body.user==nil and body.badge==nil and body.identity==nil,'identity in body')
-    local path=assert(url:match('^https://[^/]+(/.*)$'))
-    local wire=assert(json.decode(encoded))
-    h.calls[#h.calls+1]={path=path,body=wire,at=h.now}
-    counts[path]=(counts[path] or 0)+1
-    local number=counts[path]
-    local inflight=0
-    for _,v in ipairs(h.queue) do if v.network and not v.cancelled then inflight=inflight+1 end end
-    -- A timed-out operation may remain in transport; the app must ignore it.
-    if not config.late then assert(inflight==0,'concurrent HTTP requests') end
-    local entry
-    enqueue(function()
-      if config.offline then cb(false,'offline'); return end
-      local r=assert(json.decode(json.encode(default_server(path,wire))))
-      local mode=config.responses and config.responses[path]
-      mode=type(mode)=='table' and mode[number] or mode
-      if mode=='timeout' then cb(false,'timeout')
-      elseif mode=='drop' then return
-      elseif mode=='status' then cb(true,{status=503,body=json.encode(r)})
-      elseif mode=='truncated' then cb(true,{status=200,truncated=true,body=json.encode(r)})
-      elseif mode=='badjson' then cb(true,{status=200,body='{broken'})
-      elseif mode=='badshape' then cb(true,{status=200,body='{"ok":true,"top":4}'})
-      elseif mode=='notok' then cb(true,{status=200,body='{"ok":false,"error":"denied"}'})
-      else
-        if config.mutate then r=config.mutate(path,r,number) or r end
-        cb(true,{status=200,truncated=false,body=json.encode(r)})
-      end
-    end,config.late and path=='/v1/defenders/score' and number==1 and 15000 or config.http_delay)
-    entry=h.queue[#h.queue]; entry.network=true
-  end,
-  get=function() error('Defenders unexpectedly used GET') end}
   for _,k in ipairs({'assert','error','ipairs','next','pairs','pcall','select','tonumber','tostring','type','xpcall'}) do env[k]=_G[k] end
   env.math=clone(math); env.string=clone(string); env.table=clone(table)
   env._G=env
@@ -228,9 +168,10 @@ function M.new(config)
     local f=assert(io.open('apps/defenders/'..path)); local source=f:read('*a'); f:close()
     assert(#source<=(path=='main.lua' and 65536 or 262144),'file size limit')
     assert(not source:find('[\128-\255]'),'source must be ASCII')
-    if path=='main.lua' and config.server then
-      source=source:gsub('local SERVER = "[^"]+"',function() return 'local SERVER = "'..config.server..'"' end,1)
-      source=source:gsub('local SHORT_ORIGIN = "[^"]+"',function() return 'local SHORT_ORIGIN = "'..(config.short or config.server)..'"' end,1)
+    if path=='main.lua' and config.tweet_id then
+      source=source:gsub('local LAUNCH_TWEET_ID = "[^"]*"',function()
+        return 'local LAUNCH_TWEET_ID = "'..config.tweet_id..'"'
+      end,1)
     end
     collectgarbage('collect')
     local baseline=collectgarbage('count')
