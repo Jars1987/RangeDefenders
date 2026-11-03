@@ -9,6 +9,7 @@ export type Identity = {
 export type Observation = { id: string; rssi: number; bridged?: boolean };
 type Player = Identity & {
   name: string;
+  sid: string;
   x: string | null;
   seen: number;
   observed: number;
@@ -47,6 +48,7 @@ export type Room = {
   threshold: number;
   screenings: Record<string, number>;
   reason?: string;
+  endedAt?: number;
 };
 type Entitlement = {
   id: string;
@@ -56,6 +58,7 @@ type Entitlement = {
   ns: string;
   amount: number;
   claimed: boolean;
+  at: number;
 };
 export type Payout = {
   key: string;
@@ -78,12 +81,13 @@ export type State = {
       s: number;
       wave: number;
       boss: boolean;
+      seconds: number;
       day: string;
       user: string;
       ns: string;
     }
   >;
-  shares: Record<string, { app: App; kind: string; text: string; ns: string }>;
+  shares: Record<string, { app: App; kind: string; text: string; ns: string; at: number }>;
   nonces: Record<string, number>;
   lastHour: Record<string, number>;
 };
@@ -175,7 +179,26 @@ export class Engine {
       ns: i.ns,
       amount: i.ns === "demo" ? 0 : amount,
       claimed: false,
+      at: this.now(),
     });
+  }
+  shortId(i: Identity) {
+    let hash = 2166136261;
+    for (const c of i.badge) hash = Math.imul(hash ^ c.charCodeAt(0), 16777619) >>> 0;
+    const used = new Set(Object.values(this.state.players).filter(p => p.ns === i.ns && p.badge !== i.badge).map(p => p.sid));
+    for (let n = hash % 1679616; ; n = (n + 1) % 1679616) {
+      const id = n.toString(36).padStart(4, "0").toUpperCase();
+      if (!used.has(id)) return id;
+    }
+  }
+  promote(r: Room) {
+    const now = this.now(), hour = Math.floor(now / 3600000);
+    r.ranked = r.members.length >= 6;
+    if (r.ranked && now % 3600000 < 60000 && this.state.lastHour[r.ns] !== hour) {
+      r.big = true;
+      this.state.lastHour[r.ns] = hour;
+    }
+    r.pot = r.ranked ? this.config.pot * (r.big ? 3 : 1) : 0;
   }
   hello(i: Identity, b: any) {
     const k = this.key(i),
@@ -186,6 +209,7 @@ export class Engine {
       ...old,
       ...i,
       name: ascii(b.name, 20) || i.badge,
+      sid: old?.sid ?? this.shortId(i),
       x: typeof b.x === "string" ? ascii(b.x, 20) : null,
       seen: this.now(),
       observed: old?.observed ?? 0,
@@ -271,15 +295,14 @@ export class Engine {
           status: "clean",
           heat: 0,
           hop: 0,
-          credits: 1,
+          credits: 2,
           creditAt: r.start + 20000,
           ack: false,
           connected: true,
         });
         p.room = r.id;
         p.ready = false;
-        r.ranked = r.members.length >= 6;
-        r.pot = r.ranked ? this.config.pot * (r.big ? 3 : 1) : 0;
+        this.promote(r);
         r.threshold = Math.max(2, Math.ceil((r.members.length - 1) * 0.6));
       }
     }
@@ -304,10 +327,7 @@ export class Engine {
           }
       }
       if (group.length < 4) continue;
-      const now = this.now(),
-        hour = Math.floor(now / 3600000),
-        big = now % 3600000 < 60000 && this.state.lastHour[ns] !== hour;
-      if (big) this.state.lastHour[ns] = hour;
+      const now = this.now();
       const id = crypto.randomUUID().replaceAll("-", "").slice(0, 12),
         demoSource = group.findIndex((p) => p.badge.endsWith("_1")),
         source =
@@ -326,7 +346,7 @@ export class Engine {
           status: "clean",
           heat: 0,
           hop: 0,
-          credits: 1,
+          credits: 2,
           creditAt: now + this.config.preparationMs + 20000,
           ack: false,
           connected: true,
@@ -335,12 +355,13 @@ export class Engine {
         end: now + this.config.preparationMs + this.config.roundMs,
         last: now,
         ranked,
-        big,
-        pot: ranked ? (big ? this.config.pot * 3 : this.config.pot) : 0,
+        big: false,
+        pot: 0,
         infected: [],
         threshold: Math.max(2, Math.ceil((group.length - 1) * 0.6)),
         screenings: {},
       };
+      this.promote(room);
       this.state.rooms[id] = room;
       for (const p of group) {
         p.room = id;
@@ -351,6 +372,7 @@ export class Engine {
   finish(r: Room, result: Room["result"], winner?: Member, reason?: string) {
     if (r.phase === "ended") return;
     r.phase = "ended";
+    r.endedAt = this.now();
     r.result = result;
     r.winner = winner?.badge;
     r.reason = reason;
@@ -372,6 +394,7 @@ export class Engine {
   }
   tick() {
     const now = this.now();
+    this.prune();
     for (const [key, time] of Object.entries(this.state.nonces))
       if (now - time > 60000) delete this.state.nonces[key];
     for (const r of Object.values(this.state.rooms)) {
@@ -388,7 +411,7 @@ export class Engine {
       }
       if (r.phase === "preparing") {
         if (now >= r.start) {
-          if (!source.ack || r.members.some((m) => !m.connected)) {
+          if (!source.ack) {
             this.finish(r, "VOID", undefined, "Preparation incomplete");
             continue;
           }
@@ -432,7 +455,7 @@ export class Engine {
           if (!r.infected.includes(m.badge)) r.infected.push(m.badge);
         }
       }
-      if (r.infected.length >= r.threshold) this.finish(r, "ESCAPED", source);
+      if (r.infected.length >= r.threshold && (now >= r.end || now - r.start >= 120000)) this.finish(r, "ESCAPED", source);
       else if (now >= r.end)
         this.finish(
           r,
@@ -441,6 +464,23 @@ export class Engine {
           r.infected.length ? "Not enough wallets drained" : "Nobody infected",
         );
     }
+  }
+  prune() {
+    const now = this.now(), day = 86400000;
+    for (const [id, r] of Object.entries(this.state.rooms))
+      if (r.phase === "ended" && now - (r.endedAt ?? r.end) > day) {
+        for (const p of Object.values(this.state.players)) if (p.room === id) delete p.room;
+        delete this.state.rooms[id];
+      }
+    for (const [id, p] of Object.entries(this.state.players))
+      if (now - p.seen > 3600000 && (!p.room || !this.state.rooms[p.room])) delete this.state.players[id];
+    for (const [id, op] of Object.entries(this.state.ops)) if (now - op.at > day) delete this.state.ops[id];
+    for (const [id, s] of Object.entries(this.state.shares)) if (now - (s.at ?? 0) > day) delete this.state.shares[id];
+    // Welcome tombstones prevent repeat awards; unclaimed entitlements remain payable.
+    for (const [id, e] of Object.entries(this.state.entitlements))
+      if (e.campaign !== "welcome" && e.claimed && now - (e.at ?? 0) > day) delete this.state.entitlements[id];
+    const today = new Date(now).toISOString().slice(0, 10);
+    for (const [id, s] of Object.entries(this.state.scores)) if (s.day !== today) delete this.state.scores[id];
   }
   current(i: Identity) {
     const p = this.player(i);
@@ -458,6 +498,14 @@ export class Engine {
     const wasFresh = this.fresh(before.p);
     before.p.seen = this.now();
     return this.op(i, b.op, [b.action, b.target ?? null, b.id ?? null], () => {
+      if (b.action === "claim") {
+        const e = this.state.entitlements[b.id];
+        if (!e || e.user !== i.user || e.ns !== i.ns || e.app !== i.app)
+          throw new RuleError("bad_entitlement");
+        const amount = e.claimed ? 0 : e.amount;
+        e.claimed = true;
+        return { amount };
+      }
       if (b.action === "ready") {
         if (before.r && before.r.phase !== "ended")
           throw new RuleError("already_playing");
@@ -498,25 +546,20 @@ export class Engine {
         m.status = "quarantined";
         return this.view(i);
       }
-      if (b.action === "claim") {
-        const e = this.state.entitlements[b.id];
-        if (!e || e.user !== i.user || e.ns !== i.ns || e.app !== i.app)
-          throw new RuleError("bad_entitlement");
-        const amount = e.claimed ? 0 : e.amount;
-        e.claimed = true;
-        return { amount };
-      }
       if (r.phase !== "active") throw new RuleError("not_active");
       if (b.action !== "screen") throw new RuleError("bad_action");
       const target = r.members.find((t) => t.badge === b.target);
       if (!target || target === m) throw new RuleError("bad_target");
       if (m.role === "lazarus") throw new RuleError("role_denied");
       const tp = this.peer(i.ns, target.badge)!;
-      if (!target.connected || !this.mutual(p, tp, -78))
+      if (!target.connected || !this.fresh(tp) || this.now() - p.observed > OBS ||
+          !p.nearby.some(o => o.id === tp.badge && o.rssi >= -78))
         throw new RuleError("not_nearby");
+      if (target.status === "quarantined")
+        return { ...this.view(i), screen: { result: "QUARANTINED" } };
       if (m.credits < 1) throw new RuleError("no_credits");
       m.credits--;
-      let screen: any = { result: "CLEAN", age_s: 0 };
+      let screen: any = { result: "CLEAN", age_s: Math.floor((this.now() - (r.screenings[`${m.badge}:${target.badge}`] ?? r.start)) / 1000) };
       if (
         target.role === "lazarus" &&
         this.now() - r.start >= this.config.latentMs
@@ -531,6 +574,7 @@ export class Engine {
           clue: {
             id: target.infector,
             name: upstream?.name ?? target.infector,
+            sid: upstream?.sid,
             hop: target.hop,
           },
         };
@@ -559,6 +603,7 @@ export class Engine {
       .slice(0, 20)
       .map((q) => ({
         id: q.badge,
+        sid: q.sid,
         n: q.name,
         band:
           p.nearby.find((o) => o.id === q.badge)!.rssi >= -68
@@ -567,7 +612,7 @@ export class Engine {
         age_s: r
           ? Math.floor(
               (this.now() -
-                (r.screenings[`${p.badge}:${q.badge}`] ?? this.now())) /
+                (r.screenings[`${p.badge}:${q.badge}`] ?? r.start)) /
                 1000,
             )
           : 0,
@@ -620,11 +665,12 @@ export class Engine {
     };
   }
   score(i: Identity, b: any) {
-    return this.op(i, b.op, ["score", b.score, b.wave, b.boss], () => {
+    return this.op(i, b.op, ["score", b.score, b.wave, b.boss, b.seconds], () => {
       if (
         !Number.isInteger(b.score) ||
         b.score < 0 ||
-        b.score > 9999999 ||
+        b.score > scoreCap(b.wave, b.seconds, b.boss) ||
+        !Number.isInteger(b.seconds) || b.seconds < 1 || b.seconds > 86400 ||
         !Number.isInteger(b.wave) ||
         b.wave < 1 ||
         b.wave > 999 ||
@@ -635,12 +681,13 @@ export class Engine {
         day = new Date(this.now()).toISOString().slice(0, 10),
         key = `${i.ns}:${day}:${i.user}`,
         old = this.state.scores[key];
-      if (!old || old.s < b.score)
+      if (!old || !Number.isInteger(old.seconds) || old.s > scoreCap(old.wave, old.seconds, old.boss) || old.s < b.score)
         this.state.scores[key] = {
           n: p.name,
           s: b.score,
           wave: b.wave,
           boss: b.boss,
+          seconds: b.seconds,
           day,
           user: i.user,
           ns: i.ns,
@@ -656,7 +703,7 @@ export class Engine {
   top(ns: string, limit = 5) {
     const day = new Date(this.now()).toISOString().slice(0, 10);
     return Object.values(this.state.scores)
-      .filter((s) => s.ns === ns && s.day === day)
+      .filter((s) => s.ns === ns && s.day === day && Number.isInteger(s.seconds) && s.s <= scoreCap(s.wave, s.seconds, s.boss))
       .sort((a, b) => b.s - a.s || a.user.localeCompare(b.user))
       .slice(0, limit);
   }
@@ -665,4 +712,10 @@ export function ascii(v: unknown, max: number) {
   return typeof v === "string"
     ? v.replace(/[^\x20-\x7e]/g, "").slice(0, max)
     : "";
+}
+
+// 24 enemies total 600 points per wave. Bosses first arrive at 12 s.
+// Autofire is at most four shots/s, with at most 40 points per shot.
+export function scoreCap(wave: number, seconds: number, boss: boolean) {
+  return Math.min(wave * 600 + (boss ? Math.floor(seconds / 12) * 300 : 0), seconds * 160);
 }

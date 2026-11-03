@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import QRCode from "qrcode";
 const root = resolve(import.meta.dir, "../.."),
   demo = process.env.DEMO === "1";
+if (demo && process.env.ESCROW_KEY !== undefined) throw Error("DEMO cannot use ESCROW_KEY");
 const store = new SQLiteStore(
   process.env.DB_PATH ?? (demo ? "demo.sqlite" : "bp26.sqlite"),
 );

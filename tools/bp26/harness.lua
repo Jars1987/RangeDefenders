@@ -81,7 +81,7 @@ scenarios.lazarus_solo_practice=function()
   assert(current.badges[1].awards==25,'practice awarded points')
 end
 scenarios.lazarus_6_caught=function()setup(6)step(38000)screen(1,0)assert(room().result=='CAUGHT')end
-scenarios.lazarus_6_escaped=function()setup(6)step(55000)assert(room().result=='ESCAPED')end
+scenarios.lazarus_6_escaped=function()setup(6)step(150000)assert(room().result=='ESCAPED')end
 scenarios.lazarus_quarantine_chain=function()
   setup(6)
   -- Close all links except the source and its first victim before exposure starts.
@@ -103,7 +103,7 @@ scenarios.lazarus_void_on_disconnect=function()
 end
 scenarios.lazarus_4_unranked=function()setup(4)assert(room().ranked==false)step(38000)screen(1,0)assert(room().result=='CAUGHT')assert(next(inspect().payouts)==nil)end
 scenarios.lazarus_lossy_mesh=function()setup(6,2)step(38000)screen(1,0)assert(room().result=='CAUGHT')assert(losses>0)end
-scenarios.lazarus_20_badges=function()setup(20,3)assert(#room().members==20)step(55000)assert(room().result=='ESCAPED')end
+scenarios.lazarus_20_badges=function()setup(20,3)assert(#room().members==20)step(150000)assert(room().result=='ESCAPED')end
 scenarios.lazarus_offline_title=function()
  bus(1)current.badges[1].online=false step(6000)
  assert(current.badges[1]:screen():find('Offline',1,true))current.badges[1]:key('down')step(1000)
@@ -141,6 +141,101 @@ scenarios.lazarus_install_qr=function()
  assert(p.live==10,'QR widget count')
  p:key('back')assert(not p.qr,'QR not removed')
  p:key('right')step(500)assert(p.qr,'reopened QR missing')assert(p.live==10,'QR widgets leaked')
+end
+scenarios.f5_award_retry=function()
+ for _,failure in ipairs({'offline','denied','needsX','cap'})do
+  bus(1)
+  local p=current.badges[1]
+  local calls=0
+  p.env.lamps.award=function(amount,reason,cb)
+   calls=calls+1
+   p:later(function()
+    if calls==1 then
+     if failure=='needsX' then cb(true,{awarded=0,needsX=true})
+     elseif failure=='cap' then cb(true,{awarded=0}) else cb(false,failure)end
+    else cb(true,{awarded=amount})end
+   end)
+  end
+  step(1000)
+  assert(p.storage.welcome_award==nil,'failed mint marked done')
+  assert(p.storage.mint,'retry not durable')
+  assert(p.toast==(failure=='needsX' and 'Link X to earn !LAMPs' or failure=='cap' and 'Reward cap reached' or failure=='denied' and 'Award denied' or 'Award pending'))
+  step(31000)
+  assert(p.storage.welcome_award=='done' and calls==2,'mint did not recover')
+  step(10000)assert(calls==2,'mint repeated after success')
+  exchange({control='reset'})
+ end
+end
+scenarios.f10_server_hosts_sync=function()
+ local values={}
+ for _,name in ipairs({'lazarus','defenders'})do
+  local f=assert(io.open('apps/'..name..'/main.lua'))local source=f:read('*a')f:close()
+  local server=assert(source:match('local SERVER = "([^"]+)"'))
+  local short=assert(source:match('local SHORT_ORIGIN = "([^"]+)"'))
+  local m=assert(io.open('apps/'..name..'/app.json'))local manifest=JSON.decode(m:read('*a'))m:close()
+  local hosts={}for _,host in ipairs(manifest.hosts)do hosts[host]=true end
+  assert(hosts[server:match('https://([^/]+)')] and hosts[short:match('https://([^/]+)')],'manifest hosts disagree')
+  assert(#manifest.hosts==(server==short and 1 or 2),'unexpected host')
+  values[#values+1]=server..' '..short
+ end
+ assert(values[1]==values[2],'apps use different origins')
+end
+scenarios.f11_ux_copy=function()
+ bus(1)step(500)local p=current.badges[1]
+ for _,copy in ipairs({'Catch Lazarus, win !LAMPs','SELECT join (need 4 nearby)','Screen a badge, follow clues','Big Drop in','DOWN practice  RIGHT QR'})do assert(p:screen():find(copy,1,true),copy)end
+ assert(p.hint=='SELECT join  DOWN practice')
+ p:key('down')p:key('down')p:key('down')assert(p:screen():find('Wallet 3',1,true),'practice spoils source')
+ setup(6)
+ assert(current.badges[1]:screen():find('SELECT to accept',1,true))
+ assert(current.badges[2]:screen():find('Wait. Lazarus must accept.',1,true))
+ step(31000)assert(current.badges[2].hint=='SELECT screen  RIGHT quarantine')
+end
+scenarios.f11_lazarus_code_budget=function()
+ local f=assert(io.open('apps/lazarus/main.lua'))local text=f:read('*a')f:close()
+ local proxy=#string.dump(assert(load(text,'@apps/lazarus/main.lua')),true)
+ assert(#text<=13350,'Lazarus source grew')
+ assert(proxy<=11617,'Lazarus bytecode grew: '..proxy)
+ print('CODE apps/lazarus/main.lua stripped Lua 5.4 proxy='..proxy..' bytes')
+end
+scenarios.f11_practice_result_qr=function()
+ bus(1)step(500)local p=current.badges[1]
+ p:key('down')p:key('select')p:key('select')step(21000)p:key('select')
+ assert(p:screen():find('CAUGHT',1,true))
+ p:key('right')assert(p.qr,'practice result QR missing')
+ p:key('back')assert(p:screen():find('CAUGHT',1,true),'QR lost practice result')
+end
+scenarios.f12_qr_unavailable=function()
+ bus(1)step(500)local p=current.badges[1]p.env.ui.qr=nil
+ p:key('right')step(500)
+ assert(p.toast=='Update Solana OS for QR' and not p.qr)
+ p:key('down')assert(p:screen():find('Practice',1,true))
+end
+scenarios.f14_selected_peer_age=function()
+ setup(6)step(31000)
+ local p=current.badges[2]
+ select_peer(p,'B2')
+ assert(p:screen():find('s ago',1,true),'selected peer age hidden')
+ local line=p:screen():match('> [^\n]+')
+ assert(line and line:find('@B2',1,true))
+ select_peer(p,'B3')
+ assert(p:screen():match('> [^\n]+'):find('@B3',1,true),'age stuck on previous target')
+end
+scenarios.f4_p2_heat_warning=function()
+ setup(6)step(40000)
+ assert(room().phase=='active','escaped before 120 seconds')
+ assert(current.badges[2]:screen():find('Spread out or Lazarus escapes',1,true),'heat warning missing')
+end
+scenarios.p1_distinct_short_ids=function()
+ setup(6)
+ local p=current.badges[2]local ids={}
+ for _=1,5 do
+  local sid=assert(p:screen():match('> @B%d+ (%w+) '))
+  assert(#sid==4 and not ids[sid],'duplicate radar short id')ids[sid]=true p:key('down')
+ end
+end
+scenarios.f17_simulator_limits=function()
+ local f=assert(io.open('sim/index.html'))local html=f:read('*a')f:close()
+ for _,word in ipairs({'Lua 5.4','Lua 5.5','48 KB','200k','demo headers','RSSI','QR hosts','Awards always return zero','Defenders','official emulator'})do assert(html:find(word,1,true),'undocumented sim limit: '..word)end
 end
 local heap_cache={}
 local names={}for n in pairs(scenarios)do names[#names+1]=n end table.sort(names)

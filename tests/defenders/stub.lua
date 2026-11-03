@@ -9,7 +9,7 @@ local function clone(t) local out={}; for k,v in pairs(t) do out[k]=v end; retur
 function M.new(config)
   config=config or {}
   local h={objects={},queue={},calls={},now=0,max_instructions=0,max_live=0,live=0,
-    peak_heap=0,peak_total=0,proxies={},io_cost=0,module_cache={},store=config.store or {},awards={},ledger={},scores={},exited=false}
+    peak_heap=0,peak_total=0,max_live_play=0,loads={},proxies={},io_cost=0,module_cache={},store=config.store or {},awards={},ledger={},scores={},exited=false}
   local env={}
   h.env=env
   local views={}
@@ -155,6 +155,7 @@ function M.new(config)
       if excluded[v] then return end
       if t=='string' then bytes=bytes+20+4*math.ceil(#v/4)
       elseif t=='table' then
+        if v[57] and v[60] and v[12] then self.state=v end
         bytes=bytes+48
         local array,hash=0,0
         for k,x in pairs(v) do
@@ -213,20 +214,23 @@ function M.new(config)
   end
   function h:sample()
     local heap,code=self:heap()
+    if self.state and self.state[57]=="play" then self.max_live_play=math.max(self.max_live_play,self.live) end
     self.peak_heap=math.max(self.peak_heap,heap)
     self.peak_total=math.max(self.peak_total,heap+code)
     assert(heap<=48*1024,'estimated heap exceeds 48 KB: '..heap)
-    assert(heap+code<=34*1024,'peak code+heap exceeds 34 KB: '..(heap+code)..' (code '..code..', data '..heap..')')
+    assert(heap+code<=24*1024,'peak code+heap exceeds 24 KB: '..(heap+code)..' (code '..code..', data '..heap..')')
   end
   function h:load_chunk(path)
     -- Compilation is a C operation on badge. Do not charge host instrumentation
     -- as app instructions. Do charge the documented file-open/compile cost.
+    self.loads[path]=(self.loads[path] or 0)+1
     local hook,mask,count=debug.gethook(); debug.sethook()
     local f=assert(io.open('apps/defenders/'..path)); local source=f:read('*a'); f:close()
     assert(#source<=(path=='main.lua' and 65536 or 262144),'file size limit')
     assert(not source:find('[\128-\255]'),'source must be ASCII')
     if path=='main.lua' and config.server then
-      source=source:gsub('local SERVER = "https://rng.example"',function() return 'local SERVER = "'..config.server..'"' end,1)
+      source=source:gsub('local SERVER = "[^"]+"',function() return 'local SERVER = "'..config.server..'"' end,1)
+      source=source:gsub('local SHORT_ORIGIN = "[^"]+"',function() return 'local SHORT_ORIGIN = "'..(config.short or config.server)..'"' end,1)
     end
     collectgarbage('collect')
     local baseline=collectgarbage('count')

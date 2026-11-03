@@ -1,31 +1,33 @@
 local s=...
-local integer=s.integer
+local function integer(n) return type(n)=="number" and n%1==0 and n>=0 and n<=2000000000 end
+local function clean(v,n) return (type(v)=="string" and v or ""):gsub("[^ -~]","?"):sub(1,n or 35) end
 local good=false
-if s.lamp_reply then
-  local ok,r=s.lamp_reply[1],s.lamp_reply[2]; s.lamp_reply=nil
-  local a=s.welcome
+if s[30] then
+  local ok,r=s[30][1],s[30][2]; s[30]=nil
+  local a=s[63]
   if ok and type(r)=="table" and integer(r.awarded) then
-    if r.awarded>0 then a.done=true; s.reward_note="+"..r.awarded.." !LAMPs welcome bonus"
-    elseif r.needsX then s.reward_note="Link X to earn !LAMPs"
-    else s.reward_note="Welcome award unavailable" end
+    if r.awarded>0 then a={done=true}; s[63]=a; s[48]="+"..r.awarded.." !LAMPs welcome bonus"
+    elseif r.needsX then s[48]="Link X to earn !LAMPs"
+    else s[48]="Welcome award unavailable" end
     a.started=false
   elseif not ok then
     if r=="denied" or r=="offline" or r=="not linked" then a.started=false end
-    s.reward_note=r=="denied" and "Welcome award denied" or "Welcome award pending"
+    s[48]=r=="denied" and "Welcome award denied" or "Welcome award pending"
   end
-  storage.set("welcome",a); s.dirty=true
-elseif s.response then
-  local ok,res=s.response[1],s.response[2]; s.response=nil; s.busy=false
+  storage.set("welcome",a); s[20]=true
+elseif s[44] then
+  local ok,res=s[44][1],s[44][2]; s[44]=nil; s[11]=false
   local r
   if ok and type(res)=="table" and res.status==200 and not res.truncated and type(res.body)=="string" and #res.body<=3072 then r=json.decode(res.body) end
+  res=nil
   if type(r)=="table" and r.ok==true then
-    if s.kind=="hello" then
+    if s[29]=="hello" then
       if type(r.welcome)=="table" and integer(r.welcome.amount) and type(r.welcome.eligible)=="boolean" then
-        s.hello=nil; s.hello_done=true; s.welcome_amount=r.welcome.amount; s.eligible=r.welcome.eligible; s.notice=s.clean(r.msg); good=true
+        s[26]=nil; s[64]=r.welcome.amount; s[14]=not r.welcome.eligible; s[36]=clean(r.msg); good=true
       end
-    elseif s.kind=="claim" then
-      if integer(r.amount) then s.welcome.amount=r.amount; s.claim_done=true; storage.set("welcome",s.welcome); good=true end
-    elseif s.kind=="score" then
+    elseif s[29]=="claim" then
+      if integer(r.amount) then s[63].amount=r.amount; s[14]=true; storage.set("welcome",s[63]); good=true end
+    elseif s[29]=="score" then
       good=integer(r.best) and (r.rank==nil or integer(r.rank)) and type(r.top)=="table" and #r.top<=5
       if good then
         for i=1,#r.top do
@@ -34,39 +36,39 @@ elseif s.response then
         end
       end
       if good then
-        if s.sent.op==s.result_op then
-          s.board_best=r.best; s.rank=r.rank; s.top={}
-          for i=1,#r.top do s.top[i]={n=s.clean(r.top[i].n,22),s=r.top[i].s} end
-          if s.new_best then s.share_pending=s.sent end
+        if s[38].op==s[45] then
+          s[4]=math.max(s[4],r.best); s[43]=r.rank; s[59]={}
+          for i=1,#r.top do s[59][i]={n=clean(r.top[i].n,22),s=r.top[i].s} end
+          if s[34] then s[52]=s[38] end
         end
-        s.pending=s.next_score; s.next_score=nil; s.sent=nil
-        if s.pending then storage.set("score_pending",s.pending) else storage.remove("score_pending") end
+        s[38]=s[35]; s[35]=nil
+        if s[38] then storage.set("score_pending",s[38]) else storage.remove("score_pending") end
         storage.remove("score_next")
       end
-    elseif s.kind=="share" then
-      good=type(r.url)=="string" and #r.url<=40 and r.url:sub(1,#s.server+3)==s.server.."/r/" and not r.url:find("[^ -~]")
-      if good then if s.shared_op==s.result_op then s.share_url=r.url end; s.share_pending=nil end
+    elseif s[29]=="share" then
+      good=type(r.url)=="string" and #r.url<=40 and r.url:sub(1,8)=="https://" and not r.url:find("[^ -~]")
+      if good then if s[52].op==s[45] then s[53]=r.url end; s[52]=nil end
     end
   end
-  s.offline=not good
-  if good then s.retry=5000; s.wait=1200 else s.wait=s.retry; s.retry=math.min(30000,s.retry*2) end
-  s.dirty=true
-elseif s.busy then
-  s.busy=false; s.ticket=s.ticket+1; s.offline=true; s.wait=s.retry; s.retry=math.min(30000,s.retry*2); s.dirty=true
-elseif s.pending then
-  s.sent=s.pending; s.send("/v1/defenders/score",s.pending,"score")
-elseif s.hello then s.send("/v1/hello",s.hello,"hello")
-elseif s.hello_done and s.eligible and s.welcome_amount>0 and not s.claim_done and not s.welcome.done and not s.welcome.started then
-  storage.set("welcome",s.welcome)
-  s.send("/v1/welcome/claim",{app="defenders",op=s.welcome.op},"claim")
-elseif s.share_pending then
-  local a=s.share_pending; s.shared_op=a.op
-  s.send("/v1/share",{app="defenders",kind="score",data={score=a.score,wave=a.wave,boss=a.boss}},"share")
+  s[37]=not good
+  if good then s[46]=5000; s[61]=1200 else s[61]=s[46]; s[46]=math.min(30000,s[46]*2) end
+  s[20]=true
+elseif s[11] then
+  s[11]=false; s[58]=s[58]+1; s[37]=true; s[61]=s[46]; s[46]=math.min(30000,s[46]*2); s[20]=true
+elseif s[38] then
+  s[50]("/v1/defenders/score",s[38],"score")
+elseif s[26] then s[50]("/v1/hello",s[26],"hello")
+elseif s[64]~=nil and s[64]>0 and not s[14] and not s[63].done and not s[63].started then
+  storage.set("welcome",s[63])
+  s[50]("/v1/welcome/claim",{app="defenders",op=s[63].op},"claim")
+elseif s[52] then
+  local a=s[52];
+  s[50]("/v1/share",{app="defenders",kind="score",data={score=a.score,wave=a.wave,boss=a.boss}},"share")
+else s[61]=5000
 end
-local a=s.welcome
-if s.hello_done and not s.award_tried and not a.done and not a.started and integer(a.amount) and a.amount>0 then
+local a=s[63]
+if s[64]~=nil and not s[3] and not a.done and not a.started and integer(a.amount) and a.amount>0 then
   -- No award operation ID exists. Do not replay an ambiguous transport result.
-  s.award_tried=true; a.started=true; storage.set("welcome",a)
-  lamps.award(a.amount,"Welcome to Solana Defenders",s.award_reply)
+  s[3]=true; a.started=true; storage.set("welcome",a)
+  lamps.award(a.amount,"Welcome to Solana Defenders",function(ok,r) if not s[15] then s[30]={ok,r} end end)
 end
-s.need=s.pending or s.hello or s.share_pending or (s.hello_done and s.eligible and s.welcome_amount>0 and not s.claim_done and not a.done and not a.started)

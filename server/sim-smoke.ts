@@ -62,8 +62,8 @@ async function play(kind: "caught" | "escaped") {
       throw e;
     });
     (window as any).bp26.key("select");
-    await until(() => badge().includes("Investigator"), "joins room");
-    await until(() => badge().includes("CLEAN"), "active round", 45000);
+    await until(() => badge().includes("Screen nearby."), "joins room");
+    await until(() => badge().includes("CLEAN"), "active round", 150000);
     if (kind === "caught") {
       await wait(12200);
       (window as any).bp26.key("select");
@@ -73,7 +73,16 @@ async function play(kind: "caught" | "escaped") {
       const a = document.querySelector(".qr a")!;
       const result = await fetch(new URL(a.getAttribute("href")!, origin));
       if (!result.ok) throw Error("result page failed");
-    } else await until(() => badge().includes("ESCAPED"), "ESCAPED", 45000);
+      (window as any).bp26.key("back");
+      const loss=document.querySelector("#network") as any;
+      loss.checked=true; loss.dispatchEvent(new window.Event("change"));
+      (window as any).bp26.key("back");
+      await until(()=>badge().includes("Offline"),"offline title");
+      (window as any).bp26.key("right");
+      await until(()=>!!document.querySelector(".qr a"),"f10 offline short-origin QR");
+      if(document.querySelector(".qr a")!.getAttribute("href")!==origin+"/go/install?a=lazarus")
+        throw Error("f10 configured QR origin was not rewritten");
+    } else await until(() => badge().includes("ESCAPED"), "ESCAPED", 150000);
     if ((window as any).bp26.widgets > 64)
       throw Error("Widget budget exceeded");
     if (errors.length) throw Error(errors.join("\n"));

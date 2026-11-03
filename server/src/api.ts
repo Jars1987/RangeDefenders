@@ -117,6 +117,10 @@ export class API {
       } catch {
         return json({ ok: false, error: "bad_json" }, 400);
       }
+      let signed = false;
+      req.headers.forEach((_, k) => { if (k.startsWith("x-badge-")) signed = true; });
+      if (this.options.demo && signed)
+        return json({ ok: false, error: "production_disabled" }, 403);
       let i: Identity | null = null;
       if (req.headers.has("x-demo-badge")) {
         if (!this.options.demo)
@@ -210,6 +214,7 @@ export class API {
               kind: b.kind,
               text: ascii(text, 100),
               ns: i.ns,
+              at: e.now(),
             };
             answer = { url: link };
             break;

@@ -8,6 +8,7 @@
     players = [],
     nearby = [],
     positions = null,
+    badgeOrigins = [],
     network = true,
     clock = 0,
     vm,
@@ -110,7 +111,7 @@
     el.className = "widget " + kind;
     el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;min-height:${h}px;font-size:${o.size || 14}px;color:${o.color === "green" ? "#a5f7c6" : "#ecf4ec"};text-align:${o.align || "left"}`;
     if (kind === "qr") {
-      if (text.startsWith("https://example.trycloudflare.com")) {
+      if (badgeOrigins.some((origin) => text.startsWith(origin + "/"))) {
         const link = new URL(text);
         text = location.origin + link.pathname + link.search;
       }
@@ -171,6 +172,7 @@
       fetch(p).then((r) => r.text()),
     ),
   );
+  badgeOrigins = [...main.matchAll(/local (?:SERVER|SHORT_ORIGIN) = "([^"]+)"/g)].map((match) => match[1]);
   await vm.doString(
     "json=(function()\n" + codec + "\nend)()\n" + shim + "\n" + main,
   );

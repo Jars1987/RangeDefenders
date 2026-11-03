@@ -11,12 +11,14 @@ interface Env {
   GAME: DurableObjectNamespace;
   PUBLIC_ORIGIN: string;
   SHORT_ORIGIN?: string;
+  DEMO?: string;
   ESCROW_KEY?: string;
   WELCOME_AMOUNT?: string;
 }
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
-    const id = env.GAME.idFromName("bp26-production");
+    if (env.DEMO === "1" && env.ESCROW_KEY !== undefined) throw Error("DEMO cannot use ESCROW_KEY");
+    const id = env.GAME.idFromName(env.DEMO === "1" ? "bp26-demo" : "bp26-production");
     return env.GAME.get(id).fetch(req as never) as unknown as Promise<Response>;
   },
 };
@@ -28,6 +30,7 @@ export class GameRoom {
     private env: Env,
   ) {
     this.ready = state.blockConcurrencyWhile(async () => {
+      if (env.DEMO === "1" && env.ESCROW_KEY !== undefined) throw Error("DEMO cannot use ESCROW_KEY");
       const data = (await state.storage.get<State>("snapshot")) ?? emptyState();
       const store = {
         load: () => data,
@@ -43,6 +46,7 @@ export class GameRoom {
         store,
         new Verifier(data, { publicOrigin: env.PUBLIC_ORIGIN }),
         {
+          demo: env.DEMO === "1",
           publicOrigin: env.PUBLIC_ORIGIN,
           shortOrigin: env.SHORT_ORIGIN,
           escrow: env.ESCROW_KEY ? new HttpEscrow(env.ESCROW_KEY) : undefined,

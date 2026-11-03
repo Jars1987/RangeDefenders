@@ -34,7 +34,7 @@ try {
   await page.getByRole("button", { name: "SELECT", exact: true }).click();
   await page.waitForFunction(
     () =>
-      document.querySelector("#badge")?.textContent?.includes("Investigator"),
+      document.querySelector("#badge")?.textContent?.includes("Screen nearby."),
     { timeout: 15000 },
   );
   await page.waitForFunction(
@@ -68,7 +68,7 @@ try {
   await page.getByRole("button", { name: "SELECT", exact: true }).click();
   await page.waitForFunction(
     () => document.querySelector("#badge")?.textContent?.includes("ESCAPED"),
-    { timeout: 75000 },
+    { timeout: 180000 },
   );
   console.log("PASS browser ESCAPED");
   await page.screenshot({ path: artifacts + "/escaped.png", fullPage: true });

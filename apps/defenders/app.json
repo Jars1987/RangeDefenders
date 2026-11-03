@@ -7,6 +7,14 @@
   "category": "games",
   "icon": "play",
   "accent": "14F195",
-  "permissions": ["led", "lamps", "profile", "http"],
-  "hosts": ["rng.example"]
+  "permissions": [
+    "led",
+    "lamps",
+    "profile",
+    "http"
+  ],
+  "hosts": [
+    "example.trycloudflare.com",
+    "rng.example"
+  ]
 }

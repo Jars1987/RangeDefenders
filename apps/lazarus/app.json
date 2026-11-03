@@ -7,6 +7,15 @@
   "icon": "eye",
   "accent": "14F195",
   "category": "games",
-  "permissions": ["mesh", "led", "lamps", "profile", "http"],
-  "hosts": ["example.trycloudflare.com"]
+  "permissions": [
+    "mesh",
+    "led",
+    "lamps",
+    "profile",
+    "http"
+  ],
+  "hosts": [
+    "example.trycloudflare.com",
+    "rng.example"
+  ]
 }

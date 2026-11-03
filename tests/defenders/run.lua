@@ -106,7 +106,7 @@ scenario('defenders_budget',function()
   assert(manifest.id=='range-defenders' and manifest.name=='Solana Defenders' and #manifest.name<=20)
   assert(manifest.category=='games' and manifest.icon=='play' and manifest.accent=='14F195')
   assert(table.concat(manifest.permissions,',')=='led,lamps,profile,http')
-  assert(#manifest.hosts==1 and manifest.hosts[1]=='rng.example')
+  assert(table.concat(manifest.hosts,',')=='example.trycloudflare.com,rng.example')
 end)
 scenario('defenders_welcome_denied',function()
   local h=ready({welcome=25,award_denied=true})
@@ -190,14 +190,46 @@ scenario('defenders_module_lifecycle',function()
   play(h); h:tick(400)
   assert(h:has('WAVE 1') and #h.awards==1,'20-second play lost delayed welcome reward')
   assert(h.resident['@apps/defenders/lib/play.lua'])
-  assert(not h.resident['@apps/defenders/lib/menu.lua'] and not h.resident['@apps/defenders/lib/net.lua'],'phase code leaked into play')
+  assert(not h.resident['@apps/defenders/lib/menu.lua'] and h.resident['@apps/defenders/lib/net.lua'],'network must stay resident during play')
   for _=1,12 do
     h:key('back'); assert(h:has('Paused'))
-    assert(not h.resident['@apps/defenders/lib/play.lua'],'play code retained by paused screen')
+    assert(h.resident['@apps/defenders/lib/play.lua'],'pause discarded compiled play code')
     h:key('back'); h:key('right'); assert(h:has('Jose Santos and Range'))
     h:key('down'); h:key('back'); play(h)
   end
-  assert(h.peak_total<=34*1024 and h.max_live==60)
+  assert(h.peak_total<=24*1024 and h.max_live_play<=45)
+end)
+scenario('f1_widget_pools_and_compile_lifetime',function()
+  local h=ready({welcome=25,http_delay=2000})
+  local function menu()
+    for _,o in ipairs(h.objects)do if not o.removed then assert(o.text_value~='<W>' and o.text_value~='{V}' and o.text_value~='(@)' and o.text_value~='[v]','enemy widget alive on menu')end end
+  end
+  local function playing()
+    assert(h.live<=45,'more than 45 play widgets')
+    for _,o in ipairs(h.objects)do if not o.removed then
+      assert(o.kind~='qr','QR alive during play')
+      assert(o.w~=300,'overlay label alive during play')
+    end end
+  end
+  menu(); play(h); playing(); h:tick(400); playing()
+  assert(h.loads['lib/net.lua']==1 and h.loads['lib/play.lua']==1,'network/play recompiled during play')
+  h:key('back'); menu(); h:key('select'); playing()
+  assert(h.loads['lib/play.lua']==1,'pause recompiled play')
+  bot.breach(h); menu(); h:key('back'); menu(); play(h); playing()
+  assert(h.loads['lib/net.lua']==1 and h.loads['lib/play.lua']==2,'game lifetime broken')
+end)
+scenario('f9_separate_short_origin',function()
+  local h=ready({server='https://long.production.example',short='https://r.test',mutate=function(path,r)
+    if path=='/v1/share' then r.url='https://r.test/r/a' end
+    return r
+  end})
+  play(h); clear(h); bot.breach(h); h:tick(200)
+  h:key('up'); assert(h:find('https://r.test/r/a'),'separate short origin rejected')
+end)
+scenario('f18_score_reports_play_seconds',function()
+  local h=ready(); play(h); h:tick(400); h:key('back'); h:tick(400); h:key('select'); bot.breach(h); h:tick(100)
+  local score=assert(h:requests('/v1/defenders/score')[1]).body
+  assert(type(score.seconds)=='number' and score.seconds>=20 and score.seconds<h.now/1000-19,'pause time reported as play time')
 end)
 local target=arg[1] or 'all'
 if target~='all' then assert(scenarios[target],'unknown scenario: '..target); order={target} end
@@ -206,18 +238,19 @@ local proxies={}
 for _,name in ipairs(order) do
   current={}
   local ok,err=pcall(scenarios[name])
-  local instructions,live,heap,total=0,0,0,0
+  local instructions,live,heap,total,play_live=0,0,0,0,0
   for _,h in ipairs(current) do
+    play_live=math.max(play_live,h.max_live_play)
     instructions=math.max(instructions,h.max_instructions); live=math.max(live,h.max_live); heap=math.max(heap,h.peak_heap); total=math.max(total,h.peak_total)
     for path,bytes in pairs(h.proxies) do proxies[path]=math.max(proxies[path] or 0,bytes) end
   end
   worst=math.max(worst,total)
-  print(string.format('%s %s | max instructions/callback=%d | max live UI=%d | peak heap estimate=%d bytes | peak code+heap=%d bytes',
-    ok and 'PASS' or 'FAIL',name,instructions,live,heap,total))
+  print(string.format('%s %s | max instructions/callback=%d | max live UI=%d | peak heap estimate=%d bytes | peak code+heap=%d bytes | max live UI in play=%d',
+    ok and 'PASS' or 'FAIL',name,instructions,live,heap,total,play_live))
   if ok then passed=passed+1 else print(tostring(err)) end
 end
 local paths={}; for path in pairs(proxies) do paths[#paths+1]=path end; table.sort(paths)
 for _,path in ipairs(paths) do print(string.format('CODE %s proxy=%d bytes',path:sub(2),proxies[path])) end
-print(string.format('worst peak code+heap=%d bytes (limit 34816)',worst))
+print(string.format('worst peak code+heap=%d bytes (limit 24576)',worst))
 print(string.format('%d/%d PASS',passed,#order))
 if passed~=#order then os.exit(1) end

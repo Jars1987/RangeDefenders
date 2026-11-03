@@ -1,60 +1,22 @@
-local SERVER = "https://rng.example"
--- One phase chunk is retained. Solana OS has no package.loaded or manual GC.
-local s = require("lib.core")
-s.server=SERVER
-local phase,code
-local function run(name,event,a,b)
-  if phase~=name then
-    code=nil; phase=name
-    code=assert(fs.load("lib/"..name..".lua"))
-  end
-  return code(s,event,a,b)
-end
-local function settle()
-  if s.start then s.start=nil; run("play","start") end
-  if s.finish then s.finish=nil; run("board","finish") end
-  if s.dirty then
-    s.dirty=nil; s.hide()
-    run(s.state=="play" and "play" or s.state=="over" and "board" or "menu","draw")
-  end
-end
--- These callbacks retain the bootstrap and state, never a previous phase.
-function s.send(path,body,kind)
-  s.busy=true; s.deadline=7000; s.ticket=s.ticket+1; s.kind=kind
-  local ticket=s.ticket
-  http.post(SERVER..path,body,function(ok,res)
-    if not s.closed and ticket==s.ticket and s.busy then s.response={ok,res} end
-  end)
-end
-function s.award_reply(ok,r)
-  if not s.closed then s.lamp_reply={ok,r} end
-end
-function on_tick(ms)
-  if s.closed then return end
-  ms=math.max(0,math.min(1000,ms))
-  s.wait=math.max(0,s.wait-ms)
-  if s.flash>0 then s.flash=s.flash-1; if s.flash==0 then led.off() end end
-  if s.busy then s.deadline=s.deadline-ms end
-  if s.response or s.lamp_reply or (s.busy and s.deadline<=0) or (not s.busy and s.need and s.wait==0) then run("net","tick") end
-  if s.state=="play" then run("play","tick") end
-  settle()
-end
-function on_key(key,rep)
-  if s.closed then return true end
-  local handled=run(s.state=="play" and "play" or s.state=="over" and "board" or "menu","key",key,rep)
-  settle()
-  return handled
-end
-function on_mesh(from,msg) end
-function on_exit()
-  s.closed=true; s.ticket=s.ticket+1; led.off(); storage.set("best",s.best)
-end
-run("init","create")
-s.dirty=true; settle()
+local SERVER = "https://example.trycloudflare.com"
+local SHORT_ORIGIN = "https://rng.example"
+-- Network stays resident; play is compiled once per game.
+-- Dense state slots avoid a hash table; see the slot legend below.
+-- Enemies use a 24-bit mask. Slots 2, 16 and 17 are reserved.
+local s={[51]=SERVER,[54]=SHORT_ORIGIN,[57]="title",[47]="title",[49]=0,[62]=1,[31]=3,[42]=147,
+  [4]=tonumber(storage.get("best")) or 0,[60]={},[12]={},[13]={},[5]={},[27]={3,3,3},
+  [61]=0,[46]=5000,[58]=0,[23]=0,
+  [48]="",[36]="",[59]={}}
+s[63]=storage.get("welcome") or {op=string.format("%08x%08x",math.random(1,2147483646),math.random(1,2147483646))}
+s[38]=storage.get("score_pending"); s[35]=storage.get("score_next")
+assert(fs.load("lib/init.lua"))(s)
+assert(fs.load("lib/callbacks.lua"))(s)
 profile.me(function(ok,p)
-  if s.closed then return end
-  s.offline=not ok
-  s.hello={app="defenders",name=ok and type(p)=="table" and s.clean(p.name,40) or "Player",v="1.0.0"}
-  if ok and type(p)=="table" and type(p.x)=="string" then s.hello.x=s.clean(p.x,40) end
-  s.need=true; s.dirty=true
+  if s[15] then return end
+  s[37]=not ok
+  s[26]={app="defenders",name=ok and type(p)=="table" and tostring(p.name or "Player"):gsub("[^ -~]","?"):sub(1,40) or "Player",v="1.0.0"}
+  if ok and type(p)=="table" and type(p.x)=="string" then s[26].x=p.x:gsub("[^ -~]","?"):sub(1,40) end
+  s[61]=0; s[20]=true
 end)
+
+-- State slots: 1=alive, 2=award_reply, 3=award_tried, 4=best, 5=bn, 6=boss_cd, 7=boss_dir, 8=boss_hp, 9=boss_killed, 10=boss_x, 11=busy, 12=bx, 13=by, 14=claim_done, 15=closed, 16=colors, 17=counts, 18=deadline, 19=dir, 20=dirty, 21=finish, 22=fire_cd, 23=flash, 24=fx, 25=fy, 26=hello, 27=hp, 28=killer, 29=kind, 30=lamp_reply, 31=lives, 32=mask, 33=names, 34=new_best, 35=next_score, 36=notice, 37=offline, 38=pending, 39=play, 40=play_ms, 41=popup_cd, 42=px, 43=rank, 44=response, 45=result_op, 46=retry, 47=return_to, 48=reward_note, 49=score, 50=send, 51=server, 52=share_pending, 53=share_url, 54=short, 55=shot_cd, 56=start, 57=state, 58=ticket, 59=top, 60=w, 61=wait, 62=wave, 63=welcome, 64=welcome_amount

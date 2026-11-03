@@ -4,6 +4,10 @@ import { Demo } from "../src/demo";
 import { API } from "../src/api";
 import { Verifier, signedText } from "../src/auth";
 import { SQLiteStore } from "../src/storage";
+import { mkdtemp, mkdir, copyFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { GameRoom } from "../worker/index";
 import { MockEscrow } from "../src/escrow";
 function setup(n = 6, ns: "prod" | "demo" = "prod") {
   let now = 1800000001000,
@@ -97,6 +101,7 @@ describe("round rules", () => {
     f.e.config.exposureMs = 100000;
     f.start();
     expect(f.action(1, "screen", "B0").screen.result).toBe("CLEAN");
+    expect(f.action(1, "screen", "B0").screen.result).toBe("CLEAN");
     expect(() => f.action(1, "screen", "B0")).toThrow("no_credits");
     f.advance(20000);
     expect(f.e.view(f.ids[1]).room?.credits).toBe(1);
@@ -122,6 +127,8 @@ describe("round rules", () => {
     f.advance(17000);
     expect(r.infected).toHaveLength(0);
     f.advance(1000);
+    expect(r.result).toBeUndefined();
+    f.advance(102000);
     expect(r.result).toBe("ESCAPED");
     expect(new Set(r.infected).size).toBe(r.infected.length);
   });
@@ -220,10 +227,10 @@ describe("round rules", () => {
     victim.infector = "B0";
     victim.hop = 1;
     const a = f.action(1, "screen", "B2");
-    expect(a.screen.clue).toEqual({ id: "B0", name: "@B0", hop: 1 });
+    expect(a.screen.clue).toEqual({ id: "B0", name: "@B0", sid: f.e.player(f.ids[0]).sid, hop: 1 });
     expect(String(victim.status)).toBe("quarantined");
     expect(f.e.view(f.ids[1]).awards).toHaveLength(1);
-    expect(f.action(3, "screen", "B2").screen.result).toBe("CLEAN");
+    expect(f.action(3, "screen", "B2").screen.result).toBe("QUARANTINED");
     expect(f.e.view(f.ids[3]).awards).toHaveLength(0);
   });
   test("self quarantine pays nothing and keeps hunting", () => {
@@ -426,6 +433,7 @@ describe("authentication and adapters", () => {
     const score = await (
       await call("/v1/defenders/score", {
         score: 120,
+        seconds: 10,
         wave: 2,
         boss: false,
         op: "score_1",
@@ -484,5 +492,181 @@ describe("demo bots", () => {
     expect(e.current(human).r?.id).not.toBe(r.id);
     expect(e.current(human).r?.members).toHaveLength(6);
     expect(e.current(human).r?.phase).toBe("preparing");
+  });
+});
+
+
+describe("independent review regressions", () => {
+  test("f2_big_drop_latch", () => {
+    const f = setup();
+    f.set(1800000000000);
+    f.poll();
+    for (let j = 0; j < 4; j++) f.action(j, "ready");
+    const r = Object.values(f.e.state.rooms)[0];
+    expect(r.ranked).toBe(false);
+    expect(r.big).toBe(false);
+    expect(f.e.state.lastHour.prod).toBeUndefined();
+    f.action(4, "ready"); f.action(5, "ready");
+    expect(r.big).toBe(true); expect(r.pot).toBe(300);
+    expect(f.e.state.lastHour.prod).toBe(Math.floor(f.now()/3600000));
+    const late = setup(); late.set(1800000059000); late.poll();
+    for (let j = 0; j < 4; j++) late.action(j, "ready");
+    late.set(1800000060000); late.poll(); late.action(4, "ready"); late.action(5, "ready");
+    expect(Object.values(late.e.state.rooms)[0].big).toBe(false);
+  });
+  test("f3_prep_freezes_missing_investigator", () => {
+    const f = setup(); f.poll(); f.ids.forEach((_,j) => f.action(j,"ready")); f.action(0,"ack");
+    for (let t=0;t<30;t++) {
+      f.set(f.now()+1000);
+      f.ids.slice(0,5).forEach((i,j) => f.e.poll(i,{nearby:f.nearby(j)}));
+    }
+    const r = Object.values(f.e.state.rooms)[0];
+    expect(r.phase).toBe("active"); expect(r.members[5].connected).toBe(false);
+    expect(() => f.action(5,"screen","B0")).toThrow("disconnected");
+    f.e.poll(f.ids[5],{nearby:f.nearby(5)}); f.e.tick();
+    expect(r.members[5].connected).toBe(true);
+  });
+  test("f4_p2_escape_waits_120_seconds", () => {
+    const f=setup(), r=f.start();
+    expect(r.members[1].credits).toBe(2);
+    f.advance(119000); expect(r.phase).toBe("active"); expect(r.infected.length).toBeGreaterThanOrEqual(r.threshold);
+    f.advance(1000); expect(r.result).toBe("ESCAPED");
+    const short=setup(), q=short.start(); q.end=q.start+45000;
+    short.advance(45000); expect(q.result).toBe("ESCAPED");
+    const few=setup(), v=few.start(); v.infected=["B1"]; few.e.config.exposureMs=999999;
+    v.end=v.start+1000; few.advance(1000); expect(v.result).toBe("VOID");
+  });
+  test("f6_claim_after_rematch_and_leave", () => {
+    const f=setup(), r=f.start();
+    const award=f.e.entitlement(f.ids[1],"quarantine:test",5);
+    f.e.finish(r,"VOID"); f.action(1,"ready");
+    const body={action:"claim", id:award.id, op:"claim_later"};
+    expect(f.e.action(f.ids[1],body).amount).toBe(5);
+    expect(f.e.action(f.ids[1],body).amount).toBe(5);
+    expect(f.e.action(f.ids[1],{...body,op:"claim_again"}).amount).toBe(0);
+    expect(() => f.e.action(f.ids[2],{...body,op:"claim_theft"})).toThrow("bad_entitlement");
+  });
+  test("f7_repeat_quarantine_preserves_status_and_credit", () => {
+    const f=setup(), r=f.start(); r.members[2].status="tainted"; r.members[2].infector="B0";
+    f.action(1,"screen","B2");
+    const credits=r.members[3].credits;
+    expect(f.action(3,"screen","B2").screen.result).toBe("QUARANTINED");
+    expect(r.members[3].credits).toBe(credits); expect(f.e.view(f.ids[3]).awards).toHaveLength(0);
+  });
+  test("f8_key_timeout_preserves_cache_and_retries", async () => {
+    const state=emptyState(), now=Date.now();
+    const pair=await crypto.subtle.generateKey("Ed25519",true,["sign","verify"]) as CryptoKeyPair;
+    let attempts=0;
+    const v=new Verifier(state,{now:()=>now, fetchKey:async signal => {
+      attempts++; expect(signal).toBeInstanceOf(AbortSignal);
+      if(attempts===1) return new Promise(() => {});
+      return {id:"new",key:Buffer.from(await crypto.subtle.exportKey("raw",pair.publicKey)).toString("base64")};
+    }});
+    v.keys.set("old",pair.publicKey);
+    const req=new Request("https://g.test/v1/hello",{headers:{"x-badge-app":"range-lazarus","x-badge-id":"B","x-badge-user":"U","x-badge-time":String(now),"x-badge-request":"timeout_nonce","x-badge-key":"new"}});
+    const api=new API(new Engine(state),{load:()=>state,save:()=>{}},v);
+    const t=performance.now(); expect((await api.handle(req)).status).toBe(401);
+    expect(performance.now()-t).toBeLessThan(2500); expect(v.lastFetch).toBe(-Infinity); expect(v.keys.has("old")).toBe(true);
+    await v.verify(req,""); expect(attempts).toBe(2); expect(v.keys.has("new")).toBe(true);
+    expect((await api.handle(new Request("https://g.test/live"))).status).toBe(200);
+  });
+  test("f10_set_server_updates_both_packages", async () => {
+    const root=await mkdtemp(join(tmpdir(),"bp26-server-"));
+    try {
+      await mkdir(join(root,"tools/bp26"),{recursive:true});
+      await copyFile("../tools/bp26/set-server.sh",join(root,"tools/bp26/set-server.sh"));
+      for(const app of ["lazarus","defenders"]) {
+        await mkdir(join(root,"apps",app),{recursive:true});
+        for(const file of ["main.lua","app.json"]) await copyFile("../apps/"+app+"/"+file,join(root,"apps",app,file));
+      }
+      const run=(...args:string[])=>Bun.spawn(["sh",join(root,"tools/bp26/set-server.sh"),...args],{stdout:"pipe",stderr:"pipe"});
+      expect(await run("https://long.production.test","https://r.test").exited).toBe(0);
+      for(const app of ["lazarus","defenders"]) {
+        const main=await Bun.file(join(root,"apps",app,"main.lua")).text();
+        expect(main).toContain('local SERVER = "https://long.production.test"');
+        expect(main).toContain('local SHORT_ORIGIN = "https://r.test"');
+        expect((await Bun.file(join(root,"apps",app,"app.json")).json()).hosts).toEqual(["long.production.test","r.test"]);
+      }
+      expect(await run("https://r.test","https://r.test").exited).toBe(0);
+      expect((await Bun.file(join(root,"apps/lazarus/app.json")).json()).hosts).toEqual(["r.test"]);
+      const before=await Bun.file(join(root,"apps/lazarus/main.lua")).text();
+      expect(await run("http://bad.test","https://r.test").exited).not.toBe(0);
+      expect(await run("https://good.test","https://far-too-long-for-a-result-qr.example").exited).not.toBe(0);
+      expect(await Bun.file(join(root,"apps/lazarus/main.lua")).text()).toBe(before);
+    } finally { await rm(root,{recursive:true,force:true}); }
+  });
+  test("f13_screen_uses_hunter_observation_only", () => {
+    const f=setup(); f.start(); f.advance(12000);
+    f.e.player(f.ids[0]).nearby=[];
+    expect(f.action(1,"screen","B0").screen.result).toBe("CAUGHT");
+    const stale=setup(); stale.start(); stale.set(stale.now()+7000);
+    expect(() => stale.action(1,"screen","B0")).toThrow("not_nearby");
+  });
+  test("f14_clean_age_is_per_target", () => {
+    const f=setup(); f.e.config.exposureMs=999999; f.start(); f.advance(5000);
+    expect(f.action(1,"screen","B2").screen.age_s).toBe(5);
+    f.advance(4000);
+    const peers=f.e.view(f.ids[1]).nearby;
+    expect(peers.find(p=>p.id==="B2")?.age_s).toBe(4);
+    expect(peers.find(p=>p.id==="B3")?.age_s).toBe(9);
+    expect(f.action(1,"screen","B2").screen.age_s).toBe(4);
+  });
+  test("f15_prune_transient_state_keep_reward_tombstones", () => {
+    const f=setup(), r=f.start(); f.e.finish(r,"VOID");
+    const welcome=f.e.welcome(f.ids[1],{op:"welcome_old"}); expect(welcome.amount).toBe(25);
+    const claimed=f.e.entitlement(f.ids[1],"quarantine:old",5); claimed.claimed=true;
+    const pending=f.e.entitlement(f.ids[1],"quarantine:pending",5);
+    f.e.state.shares.old={app:"lazarus",kind:"install",text:"test",ns:"prod",at:f.now()};
+    const idle={...f.ids[1],badge:"idle",user:"idle"}; f.e.hello(idle,{name:"idle"});
+    f.set(f.now()+3600001); f.e.tick();
+    expect(f.e.peer("prod","idle")).toBeUndefined();
+    expect(f.e.peer("prod","B0")?.name).toBe("@B0");
+    f.set(f.now()+86400001); f.e.tick();
+    expect(Object.keys(f.e.state.rooms)).toHaveLength(0); expect(Object.keys(f.e.state.players)).toHaveLength(0);
+    expect(Object.keys(f.e.state.ops)).toHaveLength(0); expect(Object.keys(f.e.state.shares)).toHaveLength(0);
+    expect(f.e.state.entitlements[claimed.id]).toBeUndefined(); expect(f.e.state.entitlements[pending.id]).toBeDefined();
+    expect(f.e.welcome(f.ids[1],{op:"welcome_new"}).amount).toBe(0);
+  });
+  test("f16_demo_rejects_signed_production_and_escrow_startup", async () => {
+    const state=emptyState(), e=new Engine(state), v=new Verifier(state);
+    let verified=false; v.verify=async()=>{verified=true;return {ns:"prod",app:"lazarus",badge:"B",user:"U"}};
+    const api=new API(e,{load:()=>state,save:()=>{}},v,{demo:true});
+    for(const extra of [{},{"x-demo-badge":"B"}] as Record<string,string>[]) {
+      const response=await api.handle(new Request("https://g.test/v1/hello",{method:"POST",headers:{"x-badge-app":"range-lazarus",...extra},body:'{"app":"lazarus"}'}));
+      expect(response.status).toBe(403);
+    }
+    expect(verified).toBe(false); expect(Object.keys(state.players)).toHaveLength(0);
+    const proc=Bun.spawn([process.execPath,"src/index.ts"],{env:{...process.env,DEMO:"1",ESCROW_KEY:""},stdout:"pipe",stderr:"pipe"});
+    const object=new GameRoom({blockConcurrencyWhile:(fn:()=>Promise<void>)=>fn()} as never,{DEMO:"1",ESCROW_KEY:""} as never);
+    await expect(object.ready).rejects.toThrow("DEMO cannot use ESCROW_KEY");
+    expect(await proc.exited).not.toBe(0); expect(await new Response(proc.stderr).text()).toContain("DEMO cannot use ESCROW_KEY");
+  });
+  test("f18_score_caps_and_live_filter", async () => {
+    const state=emptyState(), e=new Engine(state), i:Identity={badge:"B",user:"U",ns:"prod",app:"defenders"};
+    e.hello(i,{name:"Valid"});
+    for(const b of [{score:601,wave:1,seconds:100},{score:161,wave:99,seconds:1},{score:100,wave:1,seconds:0},{score:9999999,wave:999,seconds:999}])
+      expect(()=>e.score(i,{...b,boss:false,op:"invalid_"+b.score})).toThrow("bad_score");
+    const good={score:600,wave:1,seconds:30,boss:false,op:"valid_score"};
+    expect(e.score(i,good).best).toBe(600); expect(e.score(i,good).best).toBe(600);
+    expect(()=>e.score(i,{...good,seconds:31})).toThrow("op_conflict");
+    const day=new Date(e.now()).toISOString().slice(0,10);
+    state.scores.cheat={n:"CHEATER",s:9999999,wave:1,seconds:1,boss:false,day,user:"cheat",ns:"prod"};
+    const api=new API(e,{load:()=>state,save:()=>{}},new Verifier(state));
+    const html=await (await api.handle(new Request("https://g.test/live"))).text();
+    expect(html).toContain("Valid"); expect(html).not.toContain("CHEATER");
+    const key=`prod:${day}:U`;
+    state.scores[key]={...state.scores.cheat,user:"U"};
+    expect(e.score(i,{...good,op:"replace_bad_score"}).best).toBe(600);
+  });
+  test("p1_distinct_short_ids", async () => {
+    const e=new Engine(), d=new Demo(e);
+    await d.handle(new Request("http://local/demo/session",{method:"POST",body:JSON.stringify({session:"50f32abc"})}));
+    d.tick(); const session=d.sessions.get("50f32abc")!, human=session.players[0];
+    e.poll(human,{nearby:d.nearby(session,0)});
+    const peers=e.view(human).nearby;
+    expect(peers).toHaveLength(5); expect(new Set(peers.map(p=>p.sid)).size).toBe(5);
+    expect(peers.every(p=>p.sid.length===4)).toBe(true);
+    const old=peers[0].sid; e.hello(session.players[1],{name:"Renamed"});
+    expect(e.player(session.players[1]).sid).toBe(old);
   });
 });

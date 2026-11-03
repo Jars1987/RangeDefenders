@@ -72,6 +72,14 @@
             ><button id="gather">Gather badges</button
             ><button id="separate">Spread out</button>
           </details>
+          <details id="sim-limits">
+            <summary>Simulator limits</summary>
+            <p>Lua 5.4, not badge Lua 5.5. No 48 KB heap or 200k instruction cap.
+            QR is always available. HTTP uses demo headers, not badge signatures.
+            RSSI is sampled at -52 or -74, not continuous radio. QR hosts are rewritten.
+            Awards always return zero. Defenders is not simulated.
+            CAUGHT and ESCAPED do not sign off badge firmware. Verify on the official emulator.</p>
+          </details>
         </div>
       </section>
     </main>

@@ -33,7 +33,7 @@ export class Verifier {
     public options: {
       now?: () => number;
       publicOrigin?: string;
-      fetchKey?: () => Promise<{ id: string; key: string }>;
+      fetchKey?: (signal: AbortSignal) => Promise<{ id: string; key: string }>;
     } = {},
   ) {}
   async verify(req: Request, body: string): Promise<Identity | null> {
@@ -55,27 +55,21 @@ export class Verifier {
       return null;
     let key = this.keys.get(h("key"));
     if (!key && now - this.lastFetch > 60000) {
-      this.lastFetch = now;
-      const k = await (
-        this.options.fetchKey ??
-        (async () => {
-          const r = await fetch(
-            "https://solana.com/breakpoint/badge/api/http/key",
-          );
+      const signal = AbortSignal.timeout(2000);
+      try {
+        const fetchKey = this.options.fetchKey ?? (async (signal: AbortSignal) => {
+          const r = await fetch("https://solana.com/breakpoint/badge/api/http/key", { signal });
           if (!r.ok) throw Error("key_unavailable");
           return r.json();
-        })
-      )();
-      this.keys.set(
-        k.id,
-        await crypto.subtle.importKey(
-          "raw",
-          Uint8Array.from(atob(k.key), (c) => c.charCodeAt(0)),
-          "Ed25519",
-          false,
-          ["verify"],
-        ),
-      );
+        });
+        const k = await Promise.race([
+          fetchKey(signal),
+          new Promise<never>((_, reject) => signal.addEventListener("abort", () => reject(Error("key_timeout")), { once: true })),
+        ]);
+        const imported = await crypto.subtle.importKey("raw", Uint8Array.from(atob(k.key), c => c.charCodeAt(0)), "Ed25519", false, ["verify"]);
+        this.keys.set(k.id, imported);
+        this.lastFetch = now;
+      } catch { return null; }
       key = this.keys.get(h("key"));
     }
     if (!key) return null;
