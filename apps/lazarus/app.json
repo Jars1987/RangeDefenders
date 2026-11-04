@@ -1,0 +1,21 @@
+{
+  "id": "range-lazarus",
+  "name": "Lazarus In The Room",
+  "version": "1.0.0",
+  "author": "Range",
+  "summary": "Trace the taint. Catch Lazarus. Win !LAMPs.",
+  "icon": "eye",
+  "accent": "14F195",
+  "category": "games",
+  "permissions": [
+    "mesh",
+    "led",
+    "lamps",
+    "profile",
+    "http"
+  ],
+  "hosts": [
+    "example.trycloudflare.com",
+    "rng.example"
+  ]
+}
